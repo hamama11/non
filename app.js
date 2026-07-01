@@ -1,3 +1,26 @@
+const DATA_URL = "./data.csv";
+window.universityData = [];
+
+fetch(DATA_URL)
+  .then(res => res.text())
+  .then(csv => {
+    const [header, ...rows] = csv.trim().split(/\r?\n/);
+    const keys = header.split(",").map(v => v.trim());
+
+    window.universityData = rows.map(row => {
+      const values = row.split(",").map(v => v.trim());
+      return Object.fromEntries(keys.map((key, i) => [key, values[i] ?? ""]));
+    });
+
+    console.log("데이터 로딩 완료:", window.universityData);
+
+    if (typeof handleFilterChange === "function") handleFilterChange();
+    if (typeof renderTimetable === "function") renderTimetable();
+  })
+  .catch(err => {
+    console.error("data.csv 읽기 실패:", err);
+  });
+
 // app2.js
 
 // ===== 데이터 정규화 유틸 =====
