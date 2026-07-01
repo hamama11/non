@@ -1,0 +1,571 @@
+/* style2.css */
+:root {
+    --bg-main: #f8fafc;
+    --bg-card: #ffffff;
+    --bg-input: #f1f5f9;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --primary: #4f46e5;
+    --primary-hover: #3730a3;
+    --accent-green: #059669;
+    --accent-red: #e11d48;
+    --border-color: #cbd5e1;
+    --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-family);
+    line-height: 1.5;
+    padding: 2rem 1rem;
+}
+
+.app-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(to right, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+header p {
+    color: var(--text-muted);
+}
+
+.main-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+    .main-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.filter-panel, .timetable-area {
+    background-color: var(--bg-card);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.panel-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.panel-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.section-num {
+    background-color: var(--primary);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.section-title h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.search-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+input[type="text"] {
+    flex: 1;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.5rem;
+    outline: none;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+input[type="text"]:focus {
+    border-color: var(--primary);
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.6rem 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background-color: var(--bg-input);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--border-color);
+}
+
+.search-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Tags */
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.tag {
+    background-color: var(--bg-input);
+    color: var(--text-main);
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.tag-remove {
+    cursor: pointer;
+    color: var(--accent-red);
+    font-weight: bold;
+}
+
+/* Track selector */
+.track-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.track-btn {
+    position: relative;
+    cursor: pointer;
+}
+
+.track-btn input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.track-btn span {
+    display: block;
+    text-align: center;
+    background-color: var(--bg-input);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.track-btn input:checked + span {
+    background-color: var(--primary);
+    border-color: #818cf8;
+    color: white;
+}
+
+/* Factors input */
+.factor-group {
+    background-color: rgba(255, 255, 255, 0.03);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.factor-group-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.25rem;
+}
+
+.burden-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.burden-name {
+    font-size: 0.85rem;
+}
+
+.level-selector {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.level-btn {
+    position: relative;
+    cursor: pointer;
+}
+
+.level-btn input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.level-btn span {
+    display: block;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--bg-input);
+    border-radius: 0.25rem;
+    min-width: 32px;
+    text-align: center;
+}
+
+.level-btn input:checked + span {
+    background-color: var(--primary);
+    color: white;
+}
+
+.checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.cb-label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    background-color: var(--bg-input);
+    padding: 0.3rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.cb-label input {
+    accent-color: var(--primary);
+}
+
+/* Recommendation Results */
+.candidate-area {
+    margin-top: 1rem;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.candidate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.candidate-item {
+    background-color: var(--bg-input);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.candidate-item:hover {
+    background-color: var(--border-color);
+}
+
+.candidate-info {
+    font-size: 0.85rem;
+}
+
+.candidate-add-icon {
+    color: var(--accent-green);
+    font-weight: bold;
+}
+
+/* Timetable Area */
+.timetable-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.timetable-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+    background: transparent;
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.tab-btn.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+/* Table grid */
+.tt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.tt-table th, .tt-table td {
+    border: 1px solid var(--border-color);
+    padding: 0.75rem;
+    text-align: center;
+    vertical-align: top;
+}
+
+.tt-table th {
+    background-color: var(--bg-input);
+    font-weight: 700;
+}
+
+.date-cell {
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.cell-stack {
+    position: relative;
+    padding-bottom: 8px;
+}
+.cell-stack .timetable-card:not(:first-child) {
+    margin-top: -15px;
+    margin-left: calc(var(--stack-idx, 0) * 4px);
+}
+.timetable-card.overlap {
+    border-left-color: var(--accent-red) !important;
+}
+
+/* TIMETABLE CARDS WITH ON/OFF SWITCH */
+.timetable-card {
+    background-color: var(--bg-input);
+    border-radius: 0.5rem;
+    padding: 0.6rem;
+    text-align: left;
+    position: relative;
+    border-left: 4px solid var(--primary);
+    transition: opacity 0.2s, transform 0.2s;
+    cursor: pointer;
+}
+
+.timetable-card.off {
+    opacity: 0.4;
+    border-left-color: var(--text-muted);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.card-univ {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.card-toggle {
+    font-size: 0.7rem;
+    background-color: var(--border-color);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    color: var(--text-main);
+}
+
+.timetable-card.off .card-toggle {
+    background-color: var(--bg-main);
+    color: var(--text-muted);
+}
+
+.card-track {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.card-time {
+    font-size: 0.75rem;
+    color: #cbd5e1;
+}
+
+.card-remove {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    color: var(--accent-red);
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0 0.25rem;
+    font-size: 0.9rem;
+    display: none;
+}
+
+.timetable-card:hover .card-remove {
+    display: block;
+}
+
+/* Conflict styling */
+.row-conflict {
+    background-color: rgba(244, 63, 94, 0.05);
+}
+
+.conflict-badge {
+    display: inline-block;
+    background-color: var(--accent-red);
+    color: white;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Summary Box */
+.summary-panel {
+    margin-top: 1.5rem;
+    background-color: rgba(255, 255, 255, 0.02);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px dashed var(--border-color);
+}
+
+.summary-title {
+    font-weight: bold;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.75rem;
+}
+
+.summary-card {
+    background-color: var(--bg-input);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--accent-green);
+    font-size: 0.8rem;
+}
+
+.summary-card.off {
+    border-left-color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.summary-univ {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.notice-box {
+    margin-top: 1.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background-color: rgba(255, 255, 255, 0.01);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+
+@media print {
+    body {
+        background-color: white !important;
+        color: black !important;
+        padding: 0 !important;
+    }
+    .app-header, .filter-panel, .app-footer, .notice-box, button, .timetable-tabs {
+        display: none !important;
+    }
+    .main-layout {
+        display: block !important;
+    }
+    .timetable-area {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+    .tt-table th {
+        background-color: #f1f5f9 !important;
+        color: black !important;
+    }
+    .timetable-card {
+        border: 1px solid var(--border-color) !important;
+        background: #f8fafc !important;
+    }
+    .timetable-card.off {
+        display: none !important; /* OFF로 설정된 카드는 인쇄 시 숨김 */
+    }
+}

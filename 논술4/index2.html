@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>논술 지원 시간표 설계기 v2</title>
+    <meta name="description" content="2027학년도 주요 대학 논술 전형 일정을 조건별로 필터링하고 시간표로 시각화하는 설계 도구입니다.">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style2.css">
+    <script src="data.js"></script>
+</head>
+<body>
+    <div class="app-wrapper">
+        <header class="app-header">
+            <h1>🎓 논술 지원 시간표 설계기 v2</h1>
+            <p>2027학년도 주요 대학 논술 전형 · 원하는 조건을 설정하고 맞춤 대학을 추천받으세요.</p>
+        </header>
+
+        <div class="main-layout">
+            <!-- Left Panel -->
+            <aside class="filter-panel">
+                <!-- 1. 대학 이름 입력 및 검색 -->
+                <div class="panel-section">
+                    <div class="section-title">
+                        <span class="section-num">1</span>
+                        <h2>대학 검색 및 담기</h2>
+                    </div>
+                    <div class="search-wrapper">
+                        <input type="text" id="univ-search" placeholder="대학명 입력 (예: 연세대, 고려대)">
+                        <button id="btn-search" class="btn-primary" onclick="searchCandidates()">검색</button>
+                    </div>
+                    <p class="search-hint">대학명을 검색하고 추천 또는 아래 목록에서 추가하세요.</p>
+                    <div id="selected-univs" class="tags-container"></div>
+                </div>
+
+                <!-- 대학 추천 후보 목록 (검색 결과 및 추천 목록이 바로 밑에 나오도록 이동) -->
+                <div class="panel-section" id="candidate-section" style="display:none;">
+                    <div class="section-title">
+                        <span class="section-num">1-1</span>
+                        <h2 id="candidate-title">검색/추천 결과</h2>
+                    </div>
+                    <div class="candidate-area">
+                        <div class="candidate-list" id="candidate-list"></div>
+                    </div>
+                </div>
+
+                <!-- 2. 계열 선택 -->
+                <div class="panel-section">
+                    <div class="section-title">
+                        <span class="section-num">2</span>
+                        <h2>계열 선택</h2>
+                    </div>
+                    <div class="track-buttons">
+                        <label class="track-btn">
+                            <input type="radio" name="track" value="상관없음" checked onchange="handleFilterChange()">
+                            <span>전체</span>
+                        </label>
+                        <label class="track-btn">
+                            <input type="radio" name="track" value="인문" onchange="handleFilterChange()">
+                            <span>인문</span>
+                        </label>
+                        <label class="track-btn">
+                            <input type="radio" name="track" value="자연" onchange="handleFilterChange()">
+                            <span>자연</span>
+                        </label>
+                        <label class="track-btn">
+                            <input type="radio" name="track" value="상경포함" onchange="handleFilterChange()">
+                            <span>상경</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 3. 맞춤대학 추천 (구 논술 세부 요소 필터) -->
+                <div class="panel-section">
+                    <div class="section-title">
+                        <span class="section-num">3</span>
+                        <h2>맞춤대학 추천</h2>
+                    </div>
+
+                    <!-- 수리논술 범위 -->
+                    <div class="factor-group">
+                        <div class="factor-group-title">📐 수리논술 (미적/확통/기하)</div>
+                        <div class="burden-row">
+                            <span class="burden-name">미적분</span>
+                            <div class="level-selector">
+                                <label class="level-btn"><input type="radio" name="미적" value="상" onchange="handleFilterChange()"><span>상</span></label>
+                                <label class="level-btn"><input type="radio" name="미적" value="중상" onchange="handleFilterChange()"><span>중상</span></label>
+                                <label class="level-btn"><input type="radio" name="미적" value="중" onchange="handleFilterChange()"><span>중</span></label>
+                                <label class="level-btn"><input type="radio" name="미적" value="불포함" checked onchange="handleFilterChange()"><span>불포함</span></label>
+                            </div>
+                        </div>
+                        <div class="burden-row">
+                            <span class="burden-name">확률과 통계</span>
+                            <div class="level-selector">
+                                <label class="level-btn"><input type="radio" name="확통" value="상" onchange="handleFilterChange()"><span>상</span></label>
+                                <label class="level-btn"><input type="radio" name="확통" value="중상" onchange="handleFilterChange()"><span>중상</span></label>
+                                <label class="level-btn"><input type="radio" name="확통" value="중" onchange="handleFilterChange()"><span>중</span></label>
+                                <label class="level-btn"><input type="radio" name="확통" value="불포함" checked onchange="handleFilterChange()"><span>불포함</span></label>
+                            </div>
+                        </div>
+                        <div class="burden-row">
+                            <span class="burden-name">기하</span>
+                            <div class="level-selector">
+                                <label class="level-btn"><input type="radio" name="기하" value="상" onchange="handleFilterChange()"><span>상</span></label>
+                                <label class="level-btn"><input type="radio" name="기하" value="중상" onchange="handleFilterChange()"><span>중상</span></label>
+                                <label class="level-btn"><input type="radio" name="기하" value="중" onchange="handleFilterChange()"><span>중</span></label>
+                                <label class="level-btn"><input type="radio" name="기하" value="불포함" checked onchange="handleFilterChange()"><span>불포함</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 언어논술 유형 -->
+                    <div class="factor-group">
+                        <div class="factor-group-title">📝 언어논술 (답안/제시문)</div>
+                        <div style="margin-bottom:0.5rem;">
+                            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">답안 유형/분량</div>
+                            <div class="checkbox-row">
+                                <label class="cb-label"><input type="checkbox" class="ans-cb" value="장문" onchange="handleFilterChange()"><span>장문형 (800자↑)</span></label>
+                                <label class="cb-label"><input type="checkbox" class="ans-cb" value="분할" onchange="handleFilterChange()"><span>분할형 (600~800자)</span></label>
+                                <label class="cb-label"><input type="checkbox" class="ans-cb" value="쪼개기" onchange="handleFilterChange()"><span>쪼개기형 (200~500자)</span></label>
+                                <label class="cb-label"><input type="checkbox" class="ans-cb" value="자유" onchange="handleFilterChange()"><span>자유형 (분량자율)</span></label>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">제시문 유형</div>
+                            <div class="checkbox-row">
+                                <label class="cb-label"><input type="checkbox" class="type-cb" value="통계" onchange="handleFilterChange()"><span>통계</span></label>
+                                <label class="cb-label"><input type="checkbox" class="type-cb" value="도표" onchange="handleFilterChange()"><span>도표</span></label>
+                                <label class="cb-label"><input type="checkbox" class="type-cb" value="수학" onchange="handleFilterChange()"><span>수학/수리</span></label>
+                                <label class="cb-label"><input type="checkbox" class="type-cb" value="영어" onchange="handleFilterChange()"><span>영어</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem; display:flex; gap:0.5rem;">
+                        <button class="btn-primary" style="flex:1;" onclick="recommendUniversities()">🎯 맞춤 대학 추천</button>
+                        <button class="btn-secondary" onclick="resetFilters()">초기화</button>
+                    </div>
+                </div>
+
+                <!-- 맞춤대학추천 결과 영역 (추천 밑에 뜨도록 위치 변경) -->
+                <div class="panel-section" id="recommend-section" style="display:none;">
+                    <div class="section-title">
+                        <span class="section-num">3-1</span>
+                        <h2>맞춤 추천 결과</h2>
+                    </div>
+                    <div class="candidate-area">
+                        <div class="candidate-list" id="recommend-list"></div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Timetable Area -->
+            <section class="timetable-area">
+                <div class="timetable-header">
+                    <h2>📅 나의 모의 계획표</h2>
+                    <div>
+                        <button class="btn-secondary" onclick="addNewTimetable()">＋ 새 시간표</button>
+                        <button class="btn-primary" onclick="window.print()">🖨️ 인쇄</button>
+                    </div>
+                </div>
+
+                <!-- 시간표 탭 -->
+                <div class="timetable-tabs" id="timetable-tabs"></div>
+
+                <!-- 시간표 내용 -->
+                <div id="timetable-grid-wrapper">
+                    <!-- Dynamic rendering table -->
+                </div>
+
+                <!-- 요약 패널 -->
+                <div class="summary-panel" id="summary-panel" style="display:none;">
+                    <div class="summary-title">📊 모의 지원 대학 요약 (On 상태 대학만)</div>
+                    <div class="summary-grid" id="summary-body"></div>
+                </div>
+
+                <!-- 주의 사항 -->
+                <div class="notice-box">
+                    ⚠️ 본 서비스에서 제공하는 정보는 모의 계획용으로 참고 자료로만 활용하시기 바라며, 반드시 각 대학의 2027학년도 최종 모집 요강을 확인해 주시기 바랍니다.
+                </div>
+            </section>
+        </div>
+        <footer class="app-footer" style="margin-top: 2rem; padding: 1.5rem 0; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+            <p>📧 문의: 숙명-하m | support@essaytimetable.co.kr | 본 서비스는 비영리 학습 보조 도구입니다.</p>
+        </footer>
+    </div>
+    <script src="app2.js"></script>
+</body>
+</html>
