@@ -195,6 +195,7 @@ async function init() {
     }
 
     updateDDay();
+    setInterval(updateDDay, 1000);
 }
 
 // ===== 필터 값 가져오기 =====
@@ -882,8 +883,13 @@ function updateDDay() {
     if (diff <= 0) {
         dDayEl.textContent = '수능 D-Day 경과';
     } else {
-        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-        dDayEl.textContent = `수능 D-${days}`;
+        const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const diffMinutes = Math.floor((diff / (1000 * 60)) % 60);
+        const diffSeconds = Math.floor((diff / 1000) % 60);
+        
+        const pad = (num) => String(num).padStart(2, '0');
+        dDayEl.textContent = `수능 D-${diffDays}일 ${pad(diffHours)}시간 ${pad(diffMinutes)}분 ${pad(diffSeconds)}초`;
     }
 }
 

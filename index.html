@@ -16,17 +16,26 @@
             <p>2027학년도 주요 대학 논술 전형 · 원하는 조건을 설정하고 맞춤 대학을 추천받으세요.</p>
             <div class="header-links" style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
                 <button onclick="openSecretPdf()" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
-                    📄 백분위별 지원 가능 대학 비밀번호(0522)
+                    📄 백분위별 지원 가능대학
                 </button>
-                <a href="https://sites.google.com/view/daonnonsul/%ED%99%88" target="_blank" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
-                    🔗 다온논술 상담 프로그램
-                </a>
             </div>
         </header>
 
         <div class="main-layout">
             <!-- Left Panel -->
             <aside class="filter-panel">
+                <!-- 응원의 포춘 쿠키 -->
+                <div class="panel-section">
+                    <div class="section-title">
+                        <span class="section-num">🥠</span>
+                        <h2>응원의 포춘 쿠키</h2>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background-color: var(--bg-input); border-radius: 0.75rem; border: 1px dashed var(--border-color);">
+                        <p id="fortune-text" style="font-size: 0.85rem; font-weight: 500; min-height: 2.5rem; display: flex; align-items: center; justify-content: center; color: var(--text-muted); margin-bottom: 0.75rem; transition: opacity 0.2s;">포춘 쿠키를 열어 오늘을 위한 응원의 한마디를 확인해보세요!</p>
+                        <button class="btn-primary" onclick="crackCookie()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">🥠 쿠키 열기</button>
+                    </div>
+                </div>
+
                 <!-- 1. 대학 이름 입력 및 검색 -->
                 <div class="panel-section">
                     <div class="section-title">
@@ -157,18 +166,7 @@
                     </div>
                 </div>
 
-                <!-- 응원의 포춘 쿠키 -->
-                <div class="panel-section">
-                    <div class="section-title">
-                        <span class="section-num">🥠</span>
-                        <h2>응원의 포춘 쿠키</h2>
-                    </div>
-                    <div style="text-align: center; padding: 1rem; background-color: var(--bg-input); border-radius: 0.75rem; border: 1px dashed var(--border-color);">
-                        <p id="fortune-text" style="font-size: 0.85rem; font-weight: 500; min-height: 2.5rem; display: flex; align-items: center; justify-content: center; color: var(--text-muted); margin-bottom: 0.75rem; transition: opacity 0.2s;">포춘 쿠키를 열어 오늘을 위한 응원의 한마디를 확인해보세요!</p>
-                        <button class="btn-primary" onclick="crackCookie()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">🥠 쿠키 열기</button>
-                    </div>
-                </div>
-            </aside>
+             </aside>
 
             <!-- Right Timetable Area -->
             <section class="timetable-area">
@@ -200,8 +198,9 @@
                 </div>
             </section>
         </div>
-        <footer class="app-footer" style="margin-top: 2rem; padding: 1.5rem 0; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.85rem; color: var(--text-muted);">
-            <p>📧 문의: 숙명-하m | 본 서비스는 비영리 학습 보조 도구입니다.</p>
+        <footer class="app-footer" style="margin-top: 2rem; padding: 1.5rem 0; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-muted);">
+            <p style="font-size: 1.15rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">📧 문의: 숙명-하m</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">본 서비스는 비영리 학습 보조 도구입니다.</p>
         </footer>
     </div>
     <script src="app.js"></script>
