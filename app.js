@@ -193,6 +193,8 @@ async function init() {
             }
         });
     }
+
+    updateDDay();
 }
 
 // ===== 필터 값 가져오기 =====
@@ -488,11 +490,6 @@ function toggleUniv(uniqueKey) {
     if (idx > -1) {
         active.univs.splice(idx, 1);
     } else {
-        if (active.univs.length >= 8) {
-            alert('한 계획표에 최대 8개 대학까지 담을 수 있습니다.');
-            return;
-        }
-
         active.univs.push(uniqueKey);
     }
 
@@ -871,6 +868,59 @@ window.toggleUniv = toggleUniv;
 window.toggleCardOnOff = toggleCardOnOff;
 window.addNewTimetable = addNewTimetable;
 window.switchTab = switchTab;
+window.openSecretPdf = openSecretPdf;
+window.crackCookie = crackCookie;
+
+// ===== D-day & 비밀번호 PDF & 포춘쿠키 추가 기능 =====
+function updateDDay() {
+    const targetDate = new Date('2026-11-19T08:00:00');
+    const now = new Date();
+    const diff = targetDate - now;
+    const dDayEl = document.getElementById('d-day');
+    if (!dDayEl) return;
+
+    if (diff <= 0) {
+        dDayEl.textContent = '수능 D-Day 경과';
+    } else {
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        dDayEl.textContent = `수능 D-${days}`;
+    }
+}
+
+function openSecretPdf() {
+    const pw = prompt('비밀번호를 입력하세요:');
+    if (pw === '0522') {
+        window.open('300.pdf', '_blank');
+    } else if (pw !== null) {
+        alert('비밀번호가 올바르지 않습니다.');
+    }
+}
+
+const fortunes = [
+    "지금 흐르는 땀방울이 미래의 당신을 더욱 빛나게 할 것입니다.",
+    "끝까지 포기하지 않는 자가 원하는 결과를 얻습니다.",
+    "당신은 생각보다 훨씬 더 강하고 지혜로운 사람입니다.",
+    "오늘 한 걸음 내딛은 노력이 합격이라는 큰 결실로 돌아올 것입니다.",
+    "자신을 믿으세요. 당신은 충분히 해낼 수 있는 사람입니다.",
+    "힘든 시기는 지나가고, 곧 눈부신 성공의 순간이 찾아올 것입니다.",
+    "매일 조금씩 성장하는 당신의 노력이 이미 결실을 맺기 시작했습니다.",
+    "오늘 최선을 다한 당신, 합격의 주인공은 바로 당신입니다.",
+    "흔들리지 않고 피는 꽃은 없습니다. 오늘의 고민이 당신을 더 단단하게 만듭니다.",
+    "당신의 꿈을 응원합니다. 할 수 있습니다!"
+];
+
+function crackCookie() {
+    const textEl = document.getElementById('fortune-text');
+    if (!textEl) return;
+    const randomIndex = Math.floor(Math.random() * fortunes.length);
+    textEl.style.opacity = '0';
+    setTimeout(() => {
+        textEl.textContent = fortunes[randomIndex];
+        textEl.style.color = 'var(--primary)';
+        textEl.style.fontWeight = '700';
+        textEl.style.opacity = '1';
+    }, 200);
+}
 
 // ===== DOM 시작 =====
 document.addEventListener('DOMContentLoaded', init);
