@@ -22,7 +22,7 @@
                     <button onclick="openFortuneModal()" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
                         🥠 포춘쿠키
                     </button>
-                    <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-left: 0.5rem; background-color: var(--bg-input); padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">📧 문의: 숙명-하m</span>
+                    <span style="font-size: 0.9rem; color: var(--text-muted); margin-left: 0.5rem;">📧 문의: 숙명-하m</span>
                 </div>
             </div>
             <div class="dday-card" style="background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1.2rem; width: 330px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 0.75rem; font-family: var(--font-family);">
@@ -35,6 +35,17 @@
                 </div>
             </div>
         </header>
+
+        <!-- Collapsible Essay Schedule Image -->
+        <div class="schedule-collapse-container" style="margin-bottom: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <button id="toggle-schedule-btn" onclick="toggleScheduleImage()" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: none; border: none; font-size: 1.05rem; font-weight: 700; color: var(--text-main); cursor: pointer; text-align: left; font-family: var(--font-family);">
+                <span>📅 2027학년도 논술 일정표 보기 (daliy.png)</span>
+                <span id="schedule-arrow" style="transition: transform 0.2s; display: inline-block;">▼</span>
+            </button>
+            <div id="schedule-image-content" style="display: none; border-top: 1px solid var(--border-color); padding: 1.5rem; text-align: center; background: var(--bg-main);">
+                <img src="daliy.png" alt="2027학년도 논술 일정표" style="max-width: 100%; height: auto; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);" onerror="this.src='daily.png'; this.onerror=function(){ this.style.display='none'; }">
+            </div>
+        </div>
 
         <div class="main-layout">
             <!-- Left Panel -->

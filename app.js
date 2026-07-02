@@ -862,6 +862,21 @@ window.openSecretPdf = openSecretPdf;
 window.openFortuneModal = openFortuneModal;
 window.closeFortuneModal = closeFortuneModal;
 window.crackCookieModal = crackCookieModal;
+window.toggleScheduleImage = toggleScheduleImage;
+
+function toggleScheduleImage() {
+    const content = document.getElementById('schedule-image-content');
+    const arrow = document.getElementById('schedule-arrow');
+    if (!content || !arrow) return;
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+    } else {
+        content.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+    }
+}
 
 // ===== D-day & 비밀번호 PDF & 포춘쿠키 추가 기능 =====
 function updateDDay() {
