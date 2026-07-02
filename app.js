@@ -49,8 +49,15 @@ function normalizeData(raw) {
 
 function determineTracks(row) {
     const dept = row['모집계열 및 세부 학과'] || '';
+    const uName = row['대학명'] || '';
     const ansNorm = row['_답안정규화'] || '해당없음';
     const mathNorm = row['_수리정규화'] || '해당없음';
+
+    // 성균관대 특수 처리: 수리형은 자연, 언어형은 언어로 분류
+    if (uName.includes('성균관')) {
+        if (dept.includes('언어형')) return ['언어'];
+        if (dept.includes('수리형')) return ['자연'];
+    }
 
     const tracks = new Set();
 
@@ -61,7 +68,7 @@ function determineTracks(row) {
     const isHumanities = dept.includes('인문') || dept.includes('사회') || dept.includes('사범') || dept.includes('교육') || dept.includes('예술') || dept.includes('체육') || dept.includes('의류') || dept.includes('어학') || dept.includes('언어형') || dept.includes('인문계');
     const isNatural = dept.includes('자연') || dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('한의예(자)') || dept.includes('공학') || dept.includes('수의예') || dept.includes('첨단ICT') || dept.includes('소프트웨어') || dept.includes('반도체') || dept.includes('컴퓨터') || dept.includes('인공지능') || dept.includes('생명') || dept.includes('IT') || dept.includes('자연계');
 
-    if (isNatural && hasMath) {
+    if (isNatural) {
         tracks.add('자연');
     }
 
@@ -905,12 +912,7 @@ function updateDDay() {
 }
 
 function openSecretPdf() {
-    const pw = prompt('비밀번호를 입력하세요:');
-    if (pw === '0522') {
-        window.open('300.pdf', '_blank');
-    } else if (pw !== null) {
-        alert('비밀번호가 올바르지 않습니다.');
-    }
+    window.open('300.pdf', '_blank');
 }
 
 const fortunes = [

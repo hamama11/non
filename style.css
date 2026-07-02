@@ -1,15 +1,17 @@
 /* style2.css */
+/* Digital font for D-Day counter */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
 :root {
-    --bg-main: #f8fafc;
-    --bg-card: #ffffff;
-    --bg-input: #f1f5f9;
-    --text-main: #0f172a;
-    --text-muted: #64748b;
-    --primary: #4f46e5;
-    --primary-hover: #3730a3;
-    --accent-green: #059669;
-    --accent-red: #e11d48;
-    --border-color: #cbd5e1;
+    --bg-main: #FFF7FA;
+    --bg-card: #FFFFFF;
+    --bg-input: #FFFFFF;
+    --text-main: #0F5A43;
+    --text-muted: #9B9B9B;
+    --primary: #0F5A43;
+    --primary-hover: #0a3d2e;
+    --accent-green: #0F5A43;
+    --accent-red: #b91c1c;
+    --border-color: #F4C8D2;
     --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
 }
 
@@ -32,22 +34,25 @@ body {
     margin: 0 auto;
 }
 
-header {
-    margin-bottom: 2rem;
-    text-align: center;
+.app-header {
+    background: transparent !important;
+    color: var(--text-main) !important;
+    padding: 2.5rem 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin-bottom: 2rem !important;
 }
 
-header h1 {
+.app-header h1 {
+    color: var(--text-main) !important;
     font-size: 2.25rem;
     font-weight: 800;
     margin-bottom: 0.5rem;
-    background: linear-gradient(to right, #818cf8, #c084fc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
 }
 
-header p {
-    color: var(--text-muted);
+.app-header p {
+    color: var(--text-muted) !important;
 }
 
 .main-layout {
@@ -64,9 +69,10 @@ header p {
 
 .filter-panel, .timetable-area {
     background-color: var(--bg-card);
-    border-radius: 1rem;
-    padding: 1.5rem;
+    border-radius: 1.25rem;
+    padding: 1.75rem;
     border: 1px solid var(--border-color);
+    box-shadow: 0 6px 20px rgba(15, 90, 67, 0.04);
 }
 
 .panel-section {
@@ -131,8 +137,8 @@ input[type="text"]:focus {
 button {
     cursor: pointer;
     border: none;
-    border-radius: 0.5rem;
-    padding: 0.6rem 1rem;
+    border-radius: 0.75rem;
+    padding: 0.65rem 1.25rem;
     font-weight: 600;
     font-size: 0.9rem;
     transition: all 0.2s;
@@ -145,16 +151,18 @@ button {
 
 .btn-primary:hover {
     background-color: var(--primary-hover);
+    transform: translateY(-1px);
 }
 
 .btn-secondary {
-    background-color: var(--bg-input);
-    color: var(--text-main);
-    border: 1px solid var(--border-color);
+    background-color: #F4C8D2;
+    color: #0F5A43;
+    border: 1px solid #F4C8D2;
 }
 
 .btn-secondary:hover {
-    background-color: var(--border-color);
+    background-color: #e8b2bd;
+    transform: translateY(-1px);
 }
 
 .search-hint {
@@ -409,18 +417,20 @@ button {
 
 /* TIMETABLE CARDS WITH ON/OFF SWITCH */
 .timetable-card {
-    background-color: var(--bg-input);
-    border-radius: 0.4rem;
-    padding: 0.4rem 0.5rem;
+    background-color: var(--bg-card);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
     text-align: left;
     position: relative;
-    border-left: 3px solid var(--primary);
+    border: 1px solid #F4C8D2;
+    border-left: 5px solid var(--primary);
     transition: opacity 0.2s, transform 0.2s;
     cursor: pointer;
+    box-shadow: 0 4px 12px rgba(15, 90, 67, 0.03);
 }
 
 .timetable-card.off {
-    opacity: 0.4;
+    opacity: 0.45;
     border-left-color: var(--text-muted);
 }
 
@@ -567,5 +577,108 @@ button {
     }
     .timetable-card.off {
         display: none !important; /* OFF로 설정된 카드는 인쇄 시 숨김 */
+    }
+}
+
+/* Contact Popover Hover Styles */
+.contact-popover-wrapper:hover .contact-popover {
+    display: flex !important;
+}
+
+/* === shiny-text (footer badge) === */
+@keyframes shiny {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.shiny-text {
+    background-color: #F4C8D2 !important;
+    color: #0F5A43 !important;
+    -webkit-text-fill-color: #0F5A43 !important;
+    padding: 0.2rem 0.5rem !important;
+    border-radius: 0.375rem !important;
+    font-weight: 800 !important;
+    display: inline-block !important;
+    box-shadow: 0 2px 4px rgba(15, 90, 67, 0.05) !important;
+}
+
+/* === Success Shine Animation === */
+@keyframes success-shine-move {
+    0%   { background-position: -220% center; }
+    55%  { background-position: 220% center; }
+    100% { background-position: 220% center; }
+}
+
+@keyframes sparkle-pop {
+    0%, 100% { opacity: 0;   transform: scale(0.5) translateY(-1px) rotate(-10deg); }
+    35%       { opacity: 1;   transform: scale(1.2) translateY(-5px) rotate(5deg); }
+    55%       { opacity: 0.6; transform: scale(0.9) translateY(-3px) rotate(0deg); }
+}
+
+.success-shine {
+    position: relative;
+    display: inline-block;
+    font-weight: 800;
+    /* 핑크 재조합: 딥핑크→로즈→샴페인 골드→로즈→딥핑크 */
+    background: linear-gradient(
+        105deg,
+        #C2547A 0%,
+        #C2547A 20%,
+        #E8A0B8 35%,
+        #F7E0C0 50%,
+        #E8A0B8 65%,
+        #C2547A 80%,
+        #C2547A 100%
+    );
+    background-size: 260% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: success-shine-move 3s ease-in-out infinite;
+}
+
+.success-shine::after {
+    content: '✦';
+    position: absolute;
+    top: -0.35em;
+    right: -0.8em;
+    font-size: 0.5em;
+    color: #E8A0B8;
+    -webkit-text-fill-color: #E8A0B8;
+    animation: sparkle-pop 3s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* === D-Day Digital Font === */
+#dday-numbers {
+    font-family: 'Orbitron', 'Courier New', monospace !important;
+    letter-spacing: 0.08em;
+}
+
+/* === Timetable grid background image (screen + print) === */
+.timetable-bg-wrapper {
+    position: relative;
+    min-height: 200px;
+}
+.timetable-bg-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('image.png') no-repeat center center;
+    background-size: contain;
+    opacity: 0.07;
+    pointer-events: none;
+    z-index: 0;
+}
+.timetable-bg-wrapper > * {
+    position: relative;
+    z-index: 1;
+}
+
+@media print {
+    .timetable-bg-wrapper::before {
+        opacity: 0.07 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
