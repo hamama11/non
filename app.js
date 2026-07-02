@@ -65,23 +65,16 @@ function determineTracks(row) {
         tracks.add('자연');
     }
 
-    if (isBusiness) {
-        tracks.add('인문(상경)');
-    }
-
-    if (isHumanities) {
+    if (isBusiness || isHumanities) {
         tracks.add('인문');
     }
 
     if (dept.includes('전 모집단위') || dept.includes('통합계열') || dept.includes('통합') || dept.includes('캠퍼스자율전공')) {
-        if (hasHuman || isHumanities) {
+        if (hasHuman || isHumanities || isBusiness) {
             tracks.add('인문');
         }
         if (hasMath || isNatural) {
             tracks.add('자연');
-        }
-        if (isBusiness) {
-            tracks.add('인문(상경)');
         }
     }
 
@@ -253,11 +246,9 @@ function rowMatchesFilter(row, f) {
         let trackMatch = false;
 
         if (f.계열 === '인문') {
-            trackMatch = track.includes('인문') || track.includes('사회') || track.includes('사범');
+            trackMatch = track.includes('인문') || track.includes('사회') || track.includes('사범') || track.includes('경영') || track.includes('경제') || track.includes('상경') || track.includes('경상') || track.includes('교육');
         } else if (f.계열 === '자연') {
-            trackMatch = track.includes('자연') || track.includes('의') || track.includes('약') || track.includes('공학');
-        } else if (f.계열 === '상경포함') {
-            trackMatch = track.includes('상경') || track.includes('경영') || track.includes('경제') || track.includes('인문') || track.includes('통합');
+            trackMatch = track.includes('자연') || track.includes('의') || track.includes('약') || track.includes('공학') || track.includes('소프트웨어') || track.includes('컴퓨터');
         }
 
         if (!trackMatch) return false;
@@ -562,11 +553,9 @@ function renderGrid() {
             const track = row['모집계열 및 세부 학과'] || '';
 
             if (f.계열 === '인문') {
-                return track.includes('인문') || track.includes('사회') || track.includes('사범');
+                return track.includes('인문') || track.includes('사회') || track.includes('사범') || track.includes('경영') || track.includes('경제') || track.includes('상경') || track.includes('경상') || track.includes('교육');
             } else if (f.계열 === '자연') {
-                return track.includes('자연') || track.includes('의') || track.includes('약') || track.includes('공학');
-            } else if (f.계열 === '상경포함') {
-                return track.includes('상경') || track.includes('경영') || track.includes('경제') || track.includes('인문') || track.includes('통합');
+                return track.includes('자연') || track.includes('의') || track.includes('약') || track.includes('공학') || track.includes('소프트웨어') || track.includes('컴퓨터');
             }
 
             return true;

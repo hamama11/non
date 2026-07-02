@@ -15,13 +15,14 @@
             <div style="flex: 1; min-width: 300px;">
                 <h1 style="margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;">🎓 논술 지원 시간표 설계기 v2</h1>
                 <p style="margin: 0 0 1rem 0;">2027학년도 주요 대학 논술 전형 · 원하는 조건을 설정하고 맞춤 대학을 추천받으세요.</p>
-                <div class="header-links" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <div class="header-links" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                     <button onclick="openSecretPdf()" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
                         📄 백분위별 지원 가능대학
                     </button>
                     <button onclick="openFortuneModal()" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
                         🥠 포춘쿠키
                     </button>
+                    <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-left: 0.5rem; background-color: var(--bg-input); padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: 1px solid var(--border-color);">📧 문의: 숙명-하m</span>
                 </div>
             </div>
             <div class="dday-card" style="background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1.2rem; width: 330px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 0.75rem; font-family: var(--font-family);">
@@ -82,10 +83,6 @@
                         <label class="track-btn">
                             <input type="radio" name="track" value="자연" onchange="handleFilterChange()">
                             <span>자연</span>
-                        </label>
-                        <label class="track-btn">
-                            <input type="radio" name="track" value="상경포함" onchange="handleFilterChange()">
-                            <span>상경</span>
                         </label>
                     </div>
                 </div>
@@ -202,7 +199,6 @@
             </section>
         </div>
         <footer class="app-footer" style="margin-top: 2rem; padding: 1.5rem 0; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-muted);">
-            <p style="font-size: 1.15rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.5rem;">📧 문의: 숙명-하m</p>
             <p style="font-size: 0.85rem; color: var(--text-muted);">본 서비스는 비영리 학습 보조 도구입니다.</p>
         </footer>
     </div>
