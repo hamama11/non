@@ -870,26 +870,33 @@ window.toggleCardOnOff = toggleCardOnOff;
 window.addNewTimetable = addNewTimetable;
 window.switchTab = switchTab;
 window.openSecretPdf = openSecretPdf;
-window.crackCookie = crackCookie;
+window.openFortuneModal = openFortuneModal;
+window.closeFortuneModal = closeFortuneModal;
+window.crackCookieModal = crackCookieModal;
 
 // ===== D-day & 비밀번호 PDF & 포춘쿠키 추가 기능 =====
 function updateDDay() {
     const targetDate = new Date('2026-11-19T08:00:00');
     const now = new Date();
     const diff = targetDate - now;
-    const dDayEl = document.getElementById('d-day');
-    if (!dDayEl) return;
+    
+    const dDayRightEl = document.getElementById('dday-header-right');
+    const dDayNumbersEl = document.getElementById('dday-numbers');
+    if (!dDayRightEl || !dDayNumbersEl) return;
 
     if (diff <= 0) {
-        dDayEl.textContent = '수능 D-Day 경과';
+        dDayRightEl.textContent = '2026.11.19. / D-Day 경과';
+        dDayNumbersEl.textContent = '00:00:00:00';
     } else {
         const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
         const diffHours = Math.floor((diff / (1000 * 60 * 60)) % 24);
         const diffMinutes = Math.floor((diff / (1000 * 60)) % 60);
         const diffSeconds = Math.floor((diff / 1000) % 60);
         
+        dDayRightEl.textContent = `2026.11.19. / D-${diffDays}`;
+        
         const pad = (num) => String(num).padStart(2, '0');
-        dDayEl.textContent = `수능 D-${diffDays}일 ${pad(diffHours)}시간 ${pad(diffMinutes)}분 ${pad(diffSeconds)}초`;
+        dDayNumbersEl.textContent = `${diffDays}:${pad(diffHours)}:${pad(diffMinutes)}:${pad(diffSeconds)}`;
     }
 }
 
@@ -915,15 +922,28 @@ const fortunes = [
     "당신의 꿈을 응원합니다. 할 수 있습니다!"
 ];
 
-function crackCookie() {
-    const textEl = document.getElementById('fortune-text');
+function openFortuneModal() {
+    const modal = document.getElementById('fortune-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        crackCookieModal();
+    }
+}
+
+function closeFortuneModal() {
+    const modal = document.getElementById('fortune-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function crackCookieModal() {
+    const textEl = document.getElementById('fortune-modal-text');
     if (!textEl) return;
     const randomIndex = Math.floor(Math.random() * fortunes.length);
     textEl.style.opacity = '0';
     setTimeout(() => {
         textEl.textContent = fortunes[randomIndex];
-        textEl.style.color = 'var(--primary)';
-        textEl.style.fontWeight = '700';
         textEl.style.opacity = '1';
     }, 200);
 }
