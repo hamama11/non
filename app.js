@@ -47,6 +47,60 @@ function normalizeData(raw) {
     }));
 }
 
+function determineTracks(row) {
+    const dept = row['모집계열 및 세부 학과'] || '';
+    const ansNorm = row['_답안정규화'] || '해당없음';
+    const mathNorm = row['_수리정규화'] || '해당없음';
+
+    const tracks = new Set();
+
+    const hasMath = (mathNorm !== '해당없음' && mathNorm !== '');
+    const hasHuman = (ansNorm !== '해당없음' && ansNorm !== '');
+
+    const isBusiness = dept.includes('경영') || dept.includes('경제') || dept.includes('상경') || dept.includes('경상');
+    const isHumanities = dept.includes('인문') || dept.includes('사회') || dept.includes('사범') || dept.includes('교육') || dept.includes('예술') || dept.includes('체육') || dept.includes('의류') || dept.includes('어학') || dept.includes('언어형') || dept.includes('인문계');
+    const isNatural = dept.includes('자연') || dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('한의예(자)') || dept.includes('공학') || dept.includes('수의예') || dept.includes('첨단ICT') || dept.includes('소프트웨어') || dept.includes('반도체') || dept.includes('컴퓨터') || dept.includes('인공지능') || dept.includes('생명') || dept.includes('IT') || dept.includes('자연계');
+
+    if (isNatural && hasMath) {
+        tracks.add('자연');
+    }
+
+    if (isBusiness) {
+        tracks.add('인문(상경)');
+    }
+
+    if (isHumanities) {
+        tracks.add('인문');
+    }
+
+    if (dept.includes('전 모집단위') || dept.includes('통합계열') || dept.includes('통합') || dept.includes('캠퍼스자율전공')) {
+        if (hasHuman || isHumanities) {
+            tracks.add('인문');
+        }
+        if (hasMath || isNatural) {
+            tracks.add('자연');
+        }
+        if (isBusiness) {
+            tracks.add('인문(상경)');
+        }
+    }
+
+    if (tracks.size === 0) {
+        if (hasHuman) {
+            tracks.add('인문');
+        }
+        if (hasMath) {
+            tracks.add('자연');
+        }
+    }
+
+    if (tracks.size === 0) {
+        tracks.add('인문');
+    }
+
+    return Array.from(tracks);
+}
+
 // ===== 상태 관리 =====
 const state = {
     univData: [],
@@ -179,6 +233,12 @@ function resetFilters() {
     
     const candidateSection = document.getElementById('candidate-section');
     if (candidateSection) candidateSection.style.display = 'none';
+
+    const recommendSection = document.getElementById('recommend-section');
+    if (recommendSection) recommendSection.style.display = 'none';
+
+    const searchInput = document.getElementById('univ-search');
+    if (searchInput) searchInput.value = '';
     
     handleFilterChange();
 }
@@ -271,7 +331,7 @@ function rowMatchesFilter(row, f) {
         }
     }
 
-    if (isMathFiltered && isHumanFiltered) return mathPass || humanPass;
+    if (isMathFiltered && isHumanFiltered) return mathPass && humanPass;
     if (isMathFiltered) return mathPass;
     if (isHumanFiltered) return humanPass;
     return true;
@@ -291,20 +351,17 @@ function searchCandidates() {
     
     state.univData.forEach(row => {
         const name = row['대학명'] || '';
-        const dept = row['모집계열 및 세부 학과'] || '';
 
         if (queries.some(q => name.includes(q))) {
-            let trackType = '인문';
-
-            if (dept.includes('자연') || dept.includes('의') || dept.includes('약') || dept.includes('공학')) {
-                trackType = '자연';
-            }
+            const rowTracks = determineTracks(row);
 
             if (!matched[name]) {
                 matched[name] = new Set();
             }
 
-            matched[name].add(trackType);
+            rowTracks.forEach(trackType => {
+                matched[name].add(trackType);
+            });
         }
     });
 
@@ -312,37 +369,37 @@ function searchCandidates() {
 }
 
 // ===== 맞춤 대학 추천 =====
-function recommendUniversities() {
+function recommendUniversities(forceShow = true) {
     const f = getFilters();
     const matched = {};
 
     state.univData.forEach(row => {
         if (rowMatchesFilter(row, f)) {
             const name = row['대학명'] || '';
-            const dept = row['모집계열 및 세부 학과'] || '';
-
-            let trackType = '인문';
-
-            if (dept.includes('자연') || dept.includes('의') || dept.includes('약') || dept.includes('공학')) {
-                trackType = '자연';
-            }
+            const rowTracks = determineTracks(row);
 
             if (!matched[name]) {
                 matched[name] = new Set();
             }
 
-            matched[name].add(trackType);
+            rowTracks.forEach(trackType => {
+                matched[name].add(trackType);
+            });
         }
     });
 
-    renderRecommendCandidates(matched, `🎯 조건 추천 대학`);
+    renderRecommendCandidates(matched, `🎯 조건 추천 대학`, forceShow);
 }
 
-function renderRecommendCandidates(grouped, titleText) {
+function renderRecommendCandidates(grouped, titleText, forceShow = false) {
     const listEl = document.getElementById('recommend-list');
     const secEl = document.getElementById('recommend-section');
 
     if (!listEl || !secEl) return;
+
+    if (!forceShow && secEl.style.display !== 'block') {
+        return;
+    }
     
     const univNames = Object.keys(grouped);
 
@@ -362,8 +419,8 @@ function renderRecommendCandidates(grouped, titleText) {
             const isAdded = active.univs.includes(uniqueKey);
 
             return `
-                <button class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: normal; margin-left: 0.25rem;" onclick="event.stopPropagation(); toggleUniv('${uniqueKey}')">
-                    ${trackType} ${isAdded ? '✓' : '＋'}
+                <button class="${isAdded ? 'btn-primary' : 'btn-secondary'}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: normal; margin-left: 0.25rem;" onclick="event.stopPropagation(); toggleUniv('${uniqueKey}')">
+                     ${trackType} ${isAdded ? '✓' : '＋'}
                 </button>
             `;
         }).join('');
@@ -406,8 +463,8 @@ function renderCandidates(grouped, titleText) {
             const isAdded = active.univs.includes(uniqueKey);
 
             return `
-                <button class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: normal; margin-left: 0.25rem;" onclick="event.stopPropagation(); toggleUniv('${uniqueKey}')">
-                    ${trackType} ${isAdded ? '✓' : '＋'}
+                <button class="${isAdded ? 'btn-primary' : 'btn-secondary'}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: normal; margin-left: 0.25rem;" onclick="event.stopPropagation(); toggleUniv('${uniqueKey}')">
+                     ${trackType} ${isAdded ? '✓' : '＋'}
                 </button>
             `;
         }).join('');
@@ -452,7 +509,7 @@ function toggleUniv(uniqueKey) {
         }
     }
 
-    recommendUniversities();
+    recommendUniversities(false);
 }
 
 // ===== 담은 대학 태그 렌더링 =====
@@ -485,20 +542,16 @@ function renderGrid() {
     let matchingRows = [];
 
     active.univs.forEach(uniqueKey => {
-        const [uName, trackType] = uniqueKey.replace(')', '').split(' (');
+        const match = uniqueKey.match(/^(.+)\s\((.+)\)$/);
+        if (!match) return;
+        const uName = match[1];
+        const trackType = match[2];
         const rows = state.univData.filter(row => row['대학명'] === uName);
 
         rows.forEach(row => {
-            const dept = row['모집계열 및 세부 학과'] || '';
-            let currentTrack = '인문';
+            const rowTracks = determineTracks(row);
 
-            if (dept.includes('자연') || dept.includes('의') || dept.includes('약') || dept.includes('공학')) {
-                currentTrack = '자연';
-            } else if (dept.includes('상경') || dept.includes('경영') || dept.includes('경제')) {
-                currentTrack = '인문(상경)';
-            }
-
-            if (currentTrack === trackType) {
+            if (rowTracks.includes(trackType)) {
                 matchingRows.push(row);
             }
         });
@@ -693,20 +746,16 @@ function renderSummary() {
     let matchingRows = [];
 
     active.univs.forEach(uniqueKey => {
-        const [uName, trackType] = uniqueKey.replace(')', '').split(' (');
+        const match = uniqueKey.match(/^(.+)\s\((.+)\)$/);
+        if (!match) return;
+        const uName = match[1];
+        const trackType = match[2];
         const rows = state.univData.filter(row => row['대학명'] === uName);
 
         rows.forEach(row => {
-            const dept = row['모집계열 및 세부 학과'] || '';
-            let currentTrack = '인문';
+            const rowTracks = determineTracks(row);
 
-            if (dept.includes('자연') || dept.includes('의') || dept.includes('약') || dept.includes('공학')) {
-                currentTrack = '자연';
-            } else if (dept.includes('상경') || dept.includes('경영') || dept.includes('경제')) {
-                currentTrack = '인문(상경)';
-            }
-
-            if (currentTrack === trackType) {
+            if (rowTracks.includes(trackType)) {
                 matchingRows.push(row);
             }
         });

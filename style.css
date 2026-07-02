@@ -410,11 +410,11 @@ button {
 /* TIMETABLE CARDS WITH ON/OFF SWITCH */
 .timetable-card {
     background-color: var(--bg-input);
-    border-radius: 0.5rem;
-    padding: 0.6rem;
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.5rem;
     text-align: left;
     position: relative;
-    border-left: 4px solid var(--primary);
+    border-left: 3px solid var(--primary);
     transition: opacity 0.2s, transform 0.2s;
     cursor: pointer;
 }
@@ -428,19 +428,19 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
 }
 
 .card-univ {
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .card-toggle {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     background-color: var(--border-color);
-    padding: 0.1rem 0.3rem;
-    border-radius: 0.25rem;
+    padding: 0.05rem 0.25rem;
+    border-radius: 0.2rem;
     color: var(--text-main);
 }
 
@@ -450,14 +450,14 @@ button {
 }
 
 .card-track {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
 }
 
 .card-time {
-    font-size: 0.75rem;
-    color: #cbd5e1;
+    font-size: 0.7rem;
+    color: #475569;
 }
 
 .card-remove {
