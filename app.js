@@ -194,6 +194,8 @@ async function init() {
         });
     }
 
+    showWelcomeModal();
+
     updateDDay();
     setInterval(updateDDay, 1000);
 }
@@ -870,6 +872,8 @@ window.openFortuneModal = openFortuneModal;
 window.closeFortuneModal = closeFortuneModal;
 window.crackCookieModal = crackCookieModal;
 window.toggleScheduleImage = toggleScheduleImage;
+window.showWelcomeModal = showWelcomeModal;
+window.closeWelcomeModal = closeWelcomeModal;
 
 function toggleScheduleImage() {
     const content = document.getElementById('schedule-image-content');
@@ -952,6 +956,21 @@ function crackCookieModal() {
         textEl.textContent = fortunes[randomIndex];
         textEl.style.opacity = '1';
     }, 200);
+}
+
+// ===== 웰컴 모달 =====
+function showWelcomeModal() {
+    const modal = document.getElementById('welcome-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeWelcomeModal() {
+    const modal = document.getElementById('welcome-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
 
 // ===== DOM 시작 =====

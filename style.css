@@ -682,3 +682,51 @@ button {
         print-color-adjust: exact;
     }
 }
+
+/* === Character Float Animation === */
+@keyframes char-float {
+    0%   { transform: translateY(0px) rotate(-1deg); }
+    25%  { transform: translateY(-8px) rotate(0deg); }
+    50%  { transform: translateY(-12px) rotate(1deg); }
+    75%  { transform: translateY(-6px) rotate(0deg); }
+    100% { transform: translateY(0px) rotate(-1deg); }
+}
+
+@keyframes char-shadow-pulse {
+    0%, 100% { transform: scaleX(1);    opacity: 0.18; }
+    50%       { transform: scaleX(0.75); opacity: 0.08; }
+}
+
+.character-float-wrapper {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.character-float-img {
+    height: 110px;
+    width: auto;
+    object-fit: contain;
+    animation: char-float 3.2s ease-in-out infinite;
+    filter: drop-shadow(0 8px 10px rgba(194, 84, 122, 0.18));
+    transform-origin: bottom center;
+}
+
+.character-float-wrapper::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%) scaleX(1);
+    width: 80%;
+    height: 8px;
+    background: radial-gradient(ellipse, rgba(194, 84, 122, 0.22) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: char-shadow-pulse 3.2s ease-in-out infinite;
+}
+
+@media print {
+    .character-float-wrapper { display: none; }
+}

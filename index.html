@@ -246,6 +246,46 @@
             </div>
         </footer>
     </div>
+    <!-- Welcome Modal -->
+    <div id="welcome-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(4px);">
+        <div style="background: var(--bg-card, #fff); padding: 2rem; border-radius: 1rem; text-align: left; max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid var(--border-color);">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <p style="color: #0B5D45; font-weight: 700; margin: 0 0 0.5rem 0; font-size: 0.9rem;">Your Success Map for 논술 지원 전략 by SM</p>
+                <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0 0 1rem 0; color: var(--text-main);">🎓 논술 지원 시간표 설계기 v2 <span style="font-size: 0.8rem; background: #F6C9D6; color: #0B5D45; padding: 0.2rem 0.5rem; border-radius: 999px; vertical-align: middle;">SM Smart Match</span></h2>
+                <p style="font-size: 1.05rem; font-weight: 700; color: var(--primary); margin: 0;">"수시 6논술, 어떻게 써야 할지 막막하다면?<br>내 손으로 직접 짜는 논술 합격 로드맵!"</p>
+            </div>
+            
+            <div style="background: var(--bg-main); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; text-align: center; font-size: 0.95rem; line-height: 1.6; color: var(--text-main);">
+                친구 따라 논술 간다?<br>
+                분위기에 휩쓸리지 말고, 나의 흐름을 만들어 봅시다<br><br>
+                <strong>SM Smart Match</strong>가<br>
+                일정 겹침, 전형 조건, 추천 조합까지 한눈에 정리합니다.<br><br>
+                <span style="font-weight: 700; color: #C2547A;">일정은 사이트에게, 합격은 당신에게.</span>
+            </div>
+
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 1.5rem 0 0.75rem 0; color: var(--text-main);">🌟 이럴 때 쓰면 완전 좋아요! (주요 기능)</h3>
+            <ul style="font-size: 0.9rem; line-height: 1.6; padding-left: 1.2rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+                <li style="margin-bottom: 0.5rem;"><strong>"일정 안 겹칠까?" (대학 검색 및 시간표)</strong><br>평소 마음에 품고 있던 대학을 검색해서 담기만 하세요. 우측 시간표에 시험 일정이 쫙 펼쳐집니다.</li>
+                <li style="margin-bottom: 0.5rem;"><strong>"내 실력에 딱 맞는 논술은 어디지?" (맞춤 대학 추천)</strong><br>내 강점과 약점(출제 범위, 난이도 등)을 체크하고 추천을 누르면 나에게 유리한 대학을 뽑아줍니다.</li>
+                <li><strong>"이렇게 써볼까? 저렇게 써볼까?" (새 시간표 탭 & 인쇄)</strong><br>새 시간표 탭을 만들어 여러 버전을 비교해 보고, 완성된 시간표는 인쇄해 보세요!</li>
+            </ul>
+
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 1.5rem 0 0.75rem 0; color: var(--text-main);">🍯 알면 무조건 이득인 수험생 꿀팁!</h3>
+            <ul style="font-size: 0.9rem; line-height: 1.6; padding-left: 1.2rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+                <li><strong>💡 꿀 1: 백분위별 지원 가능대학</strong> - 내 모의고사 성적으로 상향/적정/하향 라인 잡아보기!</li>
+                <li><strong>💡 꿀 2: 🥠포춘쿠키 까기</strong> - 스트레스받을 때 따뜻함이 기다리고 있습니다.</li>
+                <li><strong>💡 꿀 3: 전체 일정표 컨닝하기</strong> - 교육청 공식 요약본으로 큰 그림 그릴 때 유용합니다.</li>
+            </ul>
+
+            <div style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; padding: 0.75rem 1rem; font-size: 0.85rem; color: #b45309; margin-bottom: 1.5rem; border-radius: 0 0.25rem 0.25rem 0;">
+                ⚠️ <strong>마지막 주의사항:</strong> 여기서 짠 시간표는 '가안'일 뿐이에요! 원서 접수 전 반드시 관심 대학 입학처 홈페이지에서 <strong>2027학년도 최종 모집 요강</strong>을 더블 체크하세요!
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn-primary" onclick="closeWelcomeModal()" style="padding: 0.75rem 2rem; font-size: 1rem; font-weight: 700; width: 100%;">시작하기 🚀</button>
+            </div>
+        </div>
+    </div>
     <!-- Fortune Cookie Modal -->
     <div id="fortune-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px);">
         <div style="background: var(--bg-card, #fff); padding: 2rem; border-radius: 1rem; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid var(--border-color);">
