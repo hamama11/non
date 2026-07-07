@@ -64,10 +64,14 @@ function determineTracks(row) {
     const hasMath = (mathNorm !== '해당없음' && mathNorm !== '');
     const hasHuman = (ansNorm !== '해당없음' && ansNorm !== '');
 
+    const isMed = dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('약학부') || dept.includes('한의예') || dept.includes('수의예') || dept.includes('의약');
     const isBusiness = dept.includes('경영') || dept.includes('경제') || dept.includes('상경') || dept.includes('경상');
     const isHumanities = dept.includes('인문') || dept.includes('사회') || dept.includes('사범') || dept.includes('교육') || dept.includes('예술') || dept.includes('체육') || dept.includes('의류') || dept.includes('어학') || dept.includes('언어형') || dept.includes('인문계');
-    const isNatural = dept.includes('자연') || dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('한의예(자)') || dept.includes('공학') || dept.includes('수의예') || dept.includes('첨단ICT') || dept.includes('소프트웨어') || dept.includes('반도체') || dept.includes('컴퓨터') || dept.includes('인공지능') || dept.includes('생명') || dept.includes('IT') || dept.includes('자연계');
+    const isNatural = dept.includes('자연') || dept.includes('공학') || dept.includes('첨단ICT') || dept.includes('소프트웨어') || dept.includes('반도체') || dept.includes('컴퓨터') || dept.includes('인공지능') || dept.includes('생명') || dept.includes('IT') || dept.includes('자연계') || isMed;
 
+    if (isMed) {
+        tracks.add('의약');
+    }
     if (isNatural) {
         tracks.add('자연');
     }
@@ -106,6 +110,8 @@ const state = {
     univData: [],
     timetables: [{ id: 0, name: '시간표 1', univs: [], manualOverrides: {} }],
     activeTimetableId: 0,
+    currentRecommendations: {},
+    scheduleTranspose: true
 };
 
 const DATA_URL = './data.csv';
@@ -184,6 +190,7 @@ async function init() {
     renderActiveTags();
     renderGrid();
     renderSummary();
+    renderInteractiveSchedule();
 
     const searchInput = document.getElementById('univ-search');
     if (searchInput) {
@@ -220,6 +227,7 @@ function getFilters() {
 function handleFilterChange() {
     renderGrid();
     renderSummary();
+    renderInteractiveSchedule();
 }
 
 // ===== 필터 초기화 =====
@@ -258,6 +266,11 @@ function rowMatchesFilter(row, f) {
             trackMatch = track.includes('인문') || track.includes('사회') || track.includes('사범') || track.includes('경영') || track.includes('경제') || track.includes('상경') || track.includes('경상') || track.includes('교육');
         } else if (f.계열 === '자연') {
             trackMatch = track.includes('자연') || track.includes('의') || track.includes('약') || track.includes('공학') || track.includes('소프트웨어') || track.includes('컴퓨터');
+        } else if (f.계열 === '의약') {
+            trackMatch = track.includes('의예') || track.includes('치의예') || track.includes('의학') || track.includes('약학') || track.includes('약학부') || track.includes('한의예') || track.includes('수의예') || track.includes('의약');
+        } else if (f.계열 === '약술형') {
+            const presentType = row['제시문 유형'] || '';
+            trackMatch = presentType.includes('약술형') || presentType.includes('약술');
         }
 
         if (!trackMatch) return false;
@@ -278,9 +291,13 @@ function rowMatchesFilter(row, f) {
 
     if (isMathFiltered) {
         if (mathNorm !== '해당없음' && mathNorm !== '') {
-            const getLevelVal = lvl => ({ '상': 3, '중상': 2, '중': 1 }[lvl] || 0);
+            const getLevelVal = lvl => {
+                if (lvl === '포함') return 1;
+                return { '상': 3, '중상': 2, '중': 1 }[lvl] || 0;
+            };
             const getCardLevel = subject => {
                 if (!mathNorm.includes(subject)) return 0;
+                if (subject === '미적') return 1;
                 const m = mathNorm.match(new RegExp(subject + '\\(([^)]+)\\)'));
                 return getLevelVal(m ? m[1] : '중');
             };
@@ -306,31 +323,41 @@ function rowMatchesFilter(row, f) {
                 }
                 mathPass = satisfied;
             }
+        } else {
+            // 수리시험이 없는 대학(인문 등)은 수리 필터를 통과시킴
+            mathPass = true;
         }
+    } else {
+        mathPass = true;
     }
 
     let humanPass = false;
 
     if (isHumanFiltered) {
+        const presentMatch = f.제시문유형.length === 0 || f.제시문유형.some(t => {
+            if (t === '약술형') return presentType.includes('약술형') || presentType.includes('약술');
+            if (t === '통계') return presentType.includes('통계');
+            if (t === '도표') return presentType.includes('도표');
+            if (t === '수학') return presentType.includes('수학') || presentType.includes('수리');
+            if (t === '영어') return presentType.includes('영어');
+            return false;
+        });
+
+        const ansMatch = f.답안유형.length === 0 || f.답안유형.some(t => {
+            const target = t === '장문' ? '장문형'
+                : t === '분할' ? '분할형'
+                : t === '쪼개기' ? '쪼개기형'
+                : t === '자유' ? '자유형'
+                : t;
+            return ansNorm.includes(target);
+        });
+
         if (ansNorm !== '해당없음' && ansNorm !== '') {
-            const presentMatch = f.제시문유형.length === 0 || f.제시문유형.some(t => {
-                if (t === '통계') return presentType.includes('통계');
-                if (t === '도표') return presentType.includes('도표');
-                if (t === '수학') return presentType.includes('수학') || presentType.includes('수리');
-                if (t === '영어') return presentType.includes('영어');
-                return false;
-            });
-
-            const ansMatch = f.답안유형.length === 0 || f.답안유형.some(t => {
-                const target = t === '장문' ? '장문형'
-                    : t === '분할' ? '분할형'
-                    : t === '쪼개기' ? '쪼개기형'
-                    : t === '자유' ? '자유형'
-                    : t;
-                return ansNorm.includes(target);
-            });
-
             humanPass = presentMatch && ansMatch;
+        } else if (presentType.includes('약술형') || presentType.includes('약술')) {
+            humanPass = presentMatch && ansMatch;
+        } else if (presentMatch && f.답안유형.length === 0) {
+            humanPass = true;
         }
     }
 
@@ -391,7 +418,44 @@ function recommendUniversities(forceShow = true) {
         }
     });
 
+    state.currentRecommendations = matched;
+
     renderRecommendCandidates(matched, `🎯 조건 추천 대학`, forceShow);
+}
+
+// ===== 추천대학 전체 담기 =====
+function addAllRecommend() {
+    const active = getActiveTimetable();
+    const univNames = Object.keys(state.currentRecommendations);
+    
+    if (univNames.length === 0) {
+        alert('담을 추천 대학이 없습니다.');
+        return;
+    }
+    
+    let addedCount = 0;
+
+    univNames.forEach(name => {
+        const tracks = [...state.currentRecommendations[name]];
+        tracks.forEach(trackType => {
+            const uniqueKey = `${name} (${trackType})`;
+            if (!active.univs.includes(uniqueKey)) {
+                active.univs.push(uniqueKey);
+                addedCount++;
+            }
+        });
+    });
+
+    if (addedCount > 0) {
+        renderActiveTags();
+        renderGrid();
+        renderSummary();
+        renderRecommendCandidates(state.currentRecommendations, `🎯 조건 추천 대학`, true);
+        renderInteractiveSchedule();
+        alert(`${addedCount}개의 전형이 새롭게 담겼습니다!`);
+    } else {
+        alert('이미 모든 추천 대학이 시간표에 담겨 있습니다.');
+    }
 }
 
 function renderRecommendCandidates(grouped, titleText, forceShow = false) {
@@ -508,6 +572,10 @@ function toggleUniv(uniqueKey) {
     }
 
     recommendUniversities(false);
+    
+    if (typeof renderInteractiveSchedule === 'function') {
+        renderInteractiveSchedule();
+    }
 }
 
 // ===== 담은 대학 태그 렌더링 =====
@@ -540,39 +608,31 @@ function renderGrid() {
     let matchingRows = [];
 
     active.univs.forEach(uniqueKey => {
-        const match = uniqueKey.match(/^(.+)\s\((.+)\)$/);
+        // Support both `대학명 (trackType)` and `대학명 (trackType)|rowIdx` formats
+        const match = uniqueKey.match(/^(.+)\s\(([^|)]+)\)(?:\|(\d+))?$/);
         if (!match) return;
         const uName = match[1];
         const trackType = match[2];
-        const rows = state.univData.filter(row => row['대학명'] === uName);
+        const rowIdx = match[3] !== undefined ? parseInt(match[3]) : null;
 
-        rows.forEach(row => {
-            const rowTracks = determineTracks(row);
-
-            if (rowTracks.includes(trackType)) {
-                matchingRows.push(row);
-            }
-        });
+        if (rowIdx !== null) {
+            // Specific session: find the exact row by _rowIdx
+            const row = state.univData.find(r => r['_rowIdx'] === rowIdx);
+            if (row) matchingRows.push(row);
+        } else {
+            // Legacy: all rows for this university+track
+            const rows = state.univData.filter(row => row['대학명'] === uName);
+            rows.forEach(row => {
+                const rowTracks = determineTracks(row);
+                if (rowTracks.includes(trackType)) {
+                    matchingRows.push(row);
+                }
+            });
+        }
     });
 
-    const f = getFilters();
-
-    if (f.계열 !== '상관없음') {
-        matchingRows = matchingRows.filter(row => {
-            const track = row['모집계열 및 세부 학과'] || '';
-
-            if (f.계열 === '인문') {
-                return track.includes('인문') || track.includes('사회') || track.includes('사범') || track.includes('경영') || track.includes('경제') || track.includes('상경') || track.includes('경상') || track.includes('교육');
-            } else if (f.계열 === '자연') {
-                return track.includes('자연') || track.includes('의') || track.includes('약') || track.includes('공학') || track.includes('소프트웨어') || track.includes('컴퓨터');
-            }
-
-            return true;
-        });
-    }
-
     if (matchingRows.length === 0) {
-        container.innerHTML = `<p style="text-align:center; padding:3rem 0; color:var(--text-muted);">현재 계열 필터에 부합하는 담은 대학의 일정 데이터가 없습니다.</p>`;
+        container.innerHTML = `<p style="text-align:center; padding:3rem 0; color:var(--text-muted);">담은 대학의 일정 데이터가 없습니다.</p>`;
         return;
     }
 
@@ -742,19 +802,24 @@ function renderSummary() {
     let matchingRows = [];
 
     active.univs.forEach(uniqueKey => {
-        const match = uniqueKey.match(/^(.+)\s\((.+)\)$/);
+        const match = uniqueKey.match(/^(.+)\s\(([^|)]+)\)(?:\|(\d+))?$/);
         if (!match) return;
         const uName = match[1];
         const trackType = match[2];
-        const rows = state.univData.filter(row => row['대학명'] === uName);
+        const rowIdx = match[3] !== undefined ? parseInt(match[3]) : null;
 
-        rows.forEach(row => {
-            const rowTracks = determineTracks(row);
-
-            if (rowTracks.includes(trackType)) {
-                matchingRows.push(row);
-            }
-        });
+        if (rowIdx !== null) {
+            const row = state.univData.find(r => r['_rowIdx'] === rowIdx);
+            if (row) matchingRows.push(row);
+        } else {
+            const rows = state.univData.filter(row => row['대학명'] === uName);
+            rows.forEach(row => {
+                const rowTracks = determineTracks(row);
+                if (rowTracks.includes(trackType)) {
+                    matchingRows.push(row);
+                }
+            });
+        }
     });
     
     const isCardOn = row => {
@@ -970,6 +1035,425 @@ function closeWelcomeModal() {
     const modal = document.getElementById('welcome-modal');
     if (modal) {
         modal.style.display = 'none';
+    }
+}
+
+// ===== 인터랙티브 전체 일정표 렌더링 (daily.png 스타일) =====
+
+/**
+ * 모집계열 필드에서 짧은 구분자(창의형, 일반형, 1교시, 오전 등)를 추출한다.
+ * 대학명이 같아도 전형 유형이 다를 때 사용자가 구분할 수 있도록.
+ */
+function extractSubLabel(dept) {
+    if (dept.includes('창의형')) return '창의';
+    if (dept.includes('일반형')) return '일반';
+    if (dept.includes('1교시')) return '1교시';
+    if (dept.includes('2교시')) return '2교시';
+    if (dept.includes('3교시')) return '3교시';
+    if (dept.includes('오전')) return '오전';
+    if (dept.includes('오후')) return '오후';
+    if (dept.includes('Ⅰ') && !dept.includes('Ⅱ')) return 'Ⅰ';
+    if (dept.includes('Ⅱ')) return 'Ⅱ';
+    if (dept.includes('T1')) return 'T1';
+    if (dept.includes('T2')) return 'T2';
+    if (dept.includes('T3')) return 'T3';
+    if (dept.includes('T4')) return 'T4';
+    return '';
+}
+
+function shortenUnivName(name) {
+    if (!name) return '';
+    const mappings = {
+        '서울시립대학교': '시립', '서울시립대': '시립',
+        '홍익대학교': '홍익', '홍익대': '홍익',
+        '가톨릭대학교': '가톨릭', '가톨릭대': '가톨릭',
+        '중앙대학교': '중앙', '중앙대': '중앙',
+        '단국대학교': '단국', '단국대': '단국',
+        '상명대학교': '상명', '상명대': '상명',
+        '연세대학교': '연세', '연세대': '연세',
+        '건국대학교': '건국', '건국대': '건국',
+        '경희대학교': '경희', '경희대': '경희',
+        '고려대학교': '고려', '고려대': '고려',
+        '서강대학교': '서강', '서강대': '서강',
+        '성균관대학교': '성균관', '성균관대': '성균관',
+        '숙명여자대학교': '숙명여', '숙명여대': '숙명여',
+        '숭실대학교': '숭실', '숭실대': '숭실',
+        '동국대학교': '동국', '동국대': '동국',
+        '경북대학교': '경북', '경북대': '경북',
+        '광운대학교': '광운', '광운대': '광운',
+        '세종대학교': '세종', '세종대': '세종',
+        '이화여자대학교': '이화여', '이화여대': '이화여',
+        '한국외국어대학교': '외대', '한국외대': '외대',
+        '한양대학교': '한양', '한양대': '한양',
+        '가천대학교': '가천', '가천대': '가천',
+        '을지대학교': '을지', '을지대': '을지',
+        '서경대학교': '서경', '서경대': '서경',
+        '서울여자대학교': '서울여', '서울여대': '서울여',
+        '한국항공대학교': '항공', '한국항공대': '항공',
+        '수원대학교': '수원', '수원대': '수원',
+        '한국공학대학교': '공학대', '한국공학대': '공학대',
+        '삼육대학교': '삼육', '삼육대': '삼육',
+        '서울과학기술대학교': '과기대', '서울과기대': '과기대',
+        '한국기술교육대학교': '기술교', '한국기술교육대': '기술교',
+        '경기대학교': '경기', '경기대': '경기',
+        '동덕여자대학교': '동덕여', '동덕여대': '동덕여',
+        '강남대학교': '강남', '강남대': '강남',
+        '부산대학교': '부산', '부산대': '부산',
+        '덕성여자대학교': '덕성여', '덕성여대': '덕성여',
+        '성신여자대학교': '성신여', '성신여대': '성신여',
+        '신한대학교': '신한', '신한대': '신한',
+        '한신대학교': '한신', '한신대': '한신'
+    };
+    
+    // Check key mapping
+    for (const [key, val] of Object.entries(mappings)) {
+        if (name.includes(key)) {
+            let branch = '';
+            if (name.includes('미래')) branch = '(미)';
+            if (name.includes('세종')) branch = '(세)';
+            if (name.includes('글로벌')) branch = '(글)';
+            return val + branch;
+        }
+    }
+    return name.replace(/대학교/g, '').replace(/대학/g, '');
+}
+
+function getUnivTextColor(name) {
+    if (!name) return '#000000';
+    // 여대 판정
+    const isWomen = name.includes('여대') || name.includes('여자') || name.includes('이화') || name.includes('동덕') || name.includes('덕성') || name.includes('숙명') || name.includes('서울여');
+    if (isWomen) return '#db2777'; // Pink
+    
+    // 서울외 지역 판정
+    const isOutsideSeoul = name.includes('미래') || name.includes('세종') || name.includes('죽전') || name.includes('경북') || name.includes('가천') || name.includes('을지') || name.includes('항공') || name.includes('수원') || name.includes('공학') || name.includes('기술') || name.includes('강남') || name.includes('부산') || name.includes('신한') || name.includes('한신') || name.includes('가톨릭') || name.includes('단국') || (name.includes('경기') && !name.includes('서울캠'));
+    if (isOutsideSeoul) return '#16a34a'; // Green
+    
+    // 서울 지역 (기본값)
+    return '#000000'; // Black
+}
+
+// ===== 인터랙티브 전체 일정표 렌더링 (daily.png 스타일) =====
+
+function renderInteractiveSchedule() {
+    const container = document.getElementById('interactive-schedule-table');
+    if (!container || state.univData.length === 0) return;
+
+    const f = getFilters();
+    const active = getActiveTimetable();
+
+    const toSortKey = d => {
+        if (d.includes('수능일') || d.includes('11.19')) return 1119;
+        const m = d.match(/(\d+)\.(\d+)\./);
+        return m ? parseInt(m[1]) * 100 + parseInt(m[2]) : 9999;
+    };
+    
+    // 전체 일정에 수능일을 가상으로 끼워 넣습니다 (daily.png 캘린더 장벽)
+    const baseDates = [...new Set(state.univData.map(r => r['고사 일자']).filter(Boolean))];
+    if (!baseDates.includes('11.19.(수능일)')) {
+        baseDates.push('11.19.(수능일)');
+    }
+    const allDates = baseDates.sort((a, b) => toSortKey(a) - toSortKey(b));
+
+    const allTracks = ['인문', '자연', '의약'];
+    
+    const trackMeta = {
+        '인문': { label: '📝 인문', color: '#be3a63', bg: 'rgba(190,58,99,0.03)' },
+        '자연': { label: '🔢 자연', color: '#1a6b44', bg: 'rgba(26,107,68,0.03)' },
+        '의약': { label: '🏥 의약', color: '#6b3fa0', bg: 'rgba(107,63,160,0.03)' },
+    };
+
+    let tableHtml = '';
+
+    if (!state.scheduleTranspose) {
+        // Mode A: 세로형 (행 = 날짜, 열 = 계열)
+        let rowsHtml = '';
+        allDates.forEach(date => {
+            if (date.includes('수능일')) {
+                rowsHtml += `<tr style="border-bottom: 2px solid #000;">
+                    <td class="sched-date" style="background:#000; color:#fff; font-size:0.75rem; font-weight:800; padding: 0.35rem 0.25rem;">11.19.(목)</td>
+                    <td colspan="3" style="background:#111; color:#ef4444; font-weight:800; text-align:center; font-size:0.75rem; padding:0.35rem; border: 1px solid #000; letter-spacing: 0.1em;">⚡ 2027학년도 대학수학능력시험 (수능일)</td>
+                </tr>`;
+                return;
+            }
+
+            const rowsForDate = state.univData.filter(r => r['고사 일자'] === date);
+            if (rowsForDate.length === 0) return;
+
+            const cells = allTracks.map((trackType, colIdx) => {
+                const meta = trackMeta[trackType];
+                const trackRows = rowsForDate.filter(r => determineTracks(r).includes(trackType));
+                
+                const seenSession = new Set();
+                const buttons = [];
+
+                trackRows.forEach(r => {
+                    const uName = r['대학명'];
+                    if (seenSession.has(uName)) return;
+                    seenSession.add(uName);
+
+                    const shortName = shortenUnivName(uName);
+                    const displayLabel = shortName;
+                    
+                    // 해당 대학, 계열, 날짜에 해당하는 모든 전형들
+                    const matches = trackRows.filter(tr => tr['대학명'] === uName);
+                    const isAdded = matches.some(tr => active.univs.includes(`${uName} (${trackType})|${tr._rowIdx}`));
+                    const isMatched = matches.some(tr => rowMatchesFilter(tr, f));
+
+                    const colorVal = getUnivTextColor(uName);
+                    const c = meta.color;
+                    let btnStyle = isAdded
+                        ? `background:${c};color:#fff;border-color:${c};`
+                        : `background:transparent;color:${colorVal};border-color:${colorVal};`;
+                    
+                    if (!isMatched) {
+                        btnStyle += 'opacity:0.25;filter:grayscale(60%);';
+                    }
+
+                    buttons.push(
+                        `<button class="sched-btn${isAdded ? ' sched-btn--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${isAdded ? ' ✓' : ''}</button>`
+                    );
+                });
+
+                return `<td class="sched-cell" style="background:${meta.bg}; padding: 0.25rem;"><div style="display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-start; align-content: flex-start;">${buttons.join('')}</div></td>`;
+            }).join('');
+
+            rowsHtml += `<tr>
+                <td class="sched-date">${date}</td>
+                ${cells}
+            </tr>`;
+        });
+
+        tableHtml = `
+            <table class="sched-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th style="background:#3a3a4a; width:10%; font-size:0.7rem;">일자</th>
+                        <th style="background:#be3a63; width:33%; font-size:0.7rem;">📝 인문</th>
+                        <th style="background:#1a6b44; width:33%; font-size:0.7rem;">🔢 자연</th>
+                        <th style="background:#6b3fa0; width:24%; font-size:0.7rem;">🏥 의약</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        `;
+    } else {
+        // Mode B: 가로형 - 날짜가 한열에 다 있도록 단일 테이블 구조로 배치 조정
+        const headerCols = allDates.map(d => {
+            if (d.includes('수능일')) {
+                return `<th style="background:#000; color:#ef4444; min-width:32px; max-width:38px; font-size:0.62rem; padding:0.2rem 0; font-weight:800; border:1px solid #1a1a24; text-align:center; vertical-align:middle; white-space:nowrap;">수능일<br>(11/19)</th>`;
+            }
+            const cleanD = d.replace(/\.\([가-힣]+\)$/, m => `<br><span style="font-size:0.62rem; font-weight:normal;">${m}</span>`);
+            return `<th class="sched-th-date" style="font-size: 0.65rem; min-width: 45px; padding: 0.25rem 0.1rem; line-height: 1.2;">${cleanD}</th>`;
+        }).join('');
+
+        let bodyRows = '';
+        allTracks.forEach(trackType => {
+            const meta = trackMeta[trackType];
+            const cells = allDates.map(date => {
+                if (date.includes('수능일')) {
+                    return `<td class="sched-cell sched-cell-suneung" style="background:#0b0c10; padding:0; border: 1px solid #1a1a24; text-align:center; color:#ef4444; font-size:0.6rem; font-weight:800; vertical-align:middle;">수<br>능<br>일</td>`;
+                }
+                const rowsForCell = state.univData.filter(r => r['고사 일자'] === date && determineTracks(r).includes(trackType));
+                const seenSession = new Set();
+                const buttons = [];
+                rowsForCell.forEach(r => {
+                    const uName = r['대학명'];
+                    if (seenSession.has(uName)) return;
+                    seenSession.add(uName);
+
+                    const shortName = shortenUnivName(uName);
+                    const displayLabel = shortName;
+                    
+                    const matches = rowsForCell.filter(tr => tr['대학명'] === uName);
+                    const isAdded = matches.some(tr => active.univs.includes(`${uName} (${trackType})|${tr._rowIdx}`));
+                    const isMatched = matches.some(tr => rowMatchesFilter(tr, f));
+
+                    const colorVal = getUnivTextColor(uName);
+                    const c = meta.color;
+                    let btnStyle = isAdded
+                        ? `background:${c};color:#fff;border-color:${c};`
+                        : `background:transparent;color:${colorVal};border-color:${colorVal};`;
+                    if (!isMatched) btnStyle += 'opacity:0.25;filter:grayscale(60%);';
+
+                    buttons.push(
+                        `<button class="sched-btn-block${isAdded ? ' sched-btn-block--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${isAdded ? ' ✓' : ''}</button>`
+                    );
+                });
+                return `<td class="sched-cell" style="background:${meta.bg}; padding: 0.2rem;"><div style="display: flex; flex-direction: column; gap: 2px; justify-content: flex-start; align-items: stretch;">${buttons.join('')}</div></td>`;
+            }).join('');
+
+            let verticalLabel = '';
+            if (trackType === '인문') verticalLabel = '📝<br>인<br>문';
+            else if (trackType === '자연') verticalLabel = '🔢<br>자<br>연';
+            else if (trackType === '의약') verticalLabel = '🏥<br>의<br>약';
+
+            bodyRows += `<tr>
+                <th class="sched-track-header" style="background:${meta.color}; font-size:0.65rem; padding: 0.25rem 0.05rem; min-width: 32px; max-width: 32px; width: 32px; line-height: 1.2;">${verticalLabel}</th>
+                ${cells}
+            </tr>`;
+        });
+
+        tableHtml = `
+            <table class="sched-table">
+                <thead>
+                    <tr>
+                        <th class="sched-track-header" style="background:#3a3a4a; min-width:32px; max-width:32px; width:32px; font-size:0.6rem; padding:0.25rem 0.05rem; line-height:1.2;">계열<br>\<br>날짜</th>
+                        ${headerCols}
+                    </tr>
+                </thead>
+                <tbody>${bodyRows}</tbody>
+            </table>
+        `;
+    }
+
+    container.innerHTML = `
+        <style>
+            #interactive-schedule-table { 
+                overflow-x: auto;
+                max-height: 600px; 
+                overflow-y: auto; 
+                border-radius: 0.5rem;
+                border: 1px solid var(--border-color);
+            }
+            .sched-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.72rem;
+                table-layout: auto;
+            }
+            .sched-table thead th {
+                padding: 0.25rem 0.15rem;
+                color: #fff;
+                font-weight: 700;
+                text-align: center;
+                border: 1px solid rgba(255,255,255,0.15);
+                font-size: 0.68rem;
+            }
+            .sched-th-date {
+                padding: 0.25rem 0.15rem;
+                background: #3a3a4a;
+                color: #fff;
+                font-weight: 700;
+                text-align: center;
+                border: 1px solid rgba(255,255,255,0.12);
+            }
+            .sched-track-header {
+                color: #fff;
+                font-weight: 700;
+                padding: 0.25rem 0.15rem;
+                border: 1px solid rgba(255,255,255,0.15);
+                white-space: nowrap;
+                text-align: center;
+                font-size: 0.7rem;
+                vertical-align: middle;
+            }
+            .sched-date {
+                font-weight: 700;
+                white-space: nowrap;
+                padding: 0.25rem 0.15rem;
+                border: 1px solid var(--border-color);
+                background: var(--bg-card);
+                text-align: center;
+                color: var(--text-main);
+                font-size: 0.7rem;
+                vertical-align: middle;
+            }
+            .sched-cell {
+                border: 1px solid var(--border-color);
+                padding: 0.2rem 0.15rem;
+                vertical-align: top;
+            }
+            /* Mode A (계열이 열일 때, 이전버전 가로 나열 알약형태 버튼) */
+            .sched-btn {
+                display: inline-block;
+                margin: 1.5px;
+                padding: 1.5px 5px;
+                border-radius: 999px;
+                border: 1.2px solid;
+                font-size: 0.68rem;
+                font-weight: 600;
+                cursor: pointer;
+                font-family: var(--font-family);
+                transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+                box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+                white-space: nowrap;
+                line-height: 1.2;
+                text-align: center;
+            }
+            .sched-btn:hover { opacity: 0.85; transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.12); }
+            .sched-btn--on { box-shadow: 0 2px 4px rgba(0,0,0,0.18); }
+
+            /* Mode B (날짜가 열일 때, 세로 콤팩트 채우기 버튼) */
+            .sched-btn-block {
+                display: block;
+                width: 100%;
+                margin: 1px 0;
+                padding: 1.5px 3px;
+                border-radius: 4px;
+                border: 1px solid;
+                font-size: 0.64rem;
+                font-weight: 600;
+                cursor: pointer;
+                font-family: var(--font-family);
+                transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+                box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+                white-space: nowrap;
+                line-height: 1.2;
+                text-align: center;
+            }
+            .sched-btn-block:hover { opacity: 0.85; transform: translateY(-1px); }
+            .sched-btn-block--on { box-shadow: 0 2px 4px rgba(0,0,0,0.18); }
+        </style>
+        ${tableHtml}
+    `;
+}
+
+function toggleUnivAndRenderSchedule(uName, trackType, date) {
+    const active = getActiveTimetable();
+    const targetRows = state.univData.filter(r => 
+        r['고사 일자'] === date && 
+        determineTracks(r).includes(trackType) && 
+        r['대학명'] === uName
+    );
+    if (targetRows.length === 0) return;
+
+    const keys = targetRows.map(r => `${uName} (${trackType})|${r._rowIdx}`);
+    const anyAdded = keys.some(k => active.univs.includes(k));
+
+    if (anyAdded) {
+        keys.forEach(k => {
+            const idx = active.univs.indexOf(k);
+            if (idx > -1) active.univs.splice(idx, 1);
+        });
+    } else {
+        keys.forEach(k => {
+            if (!active.univs.includes(k)) active.univs.push(k);
+        });
+    }
+
+    renderActiveTags();
+    renderGrid();
+    renderSummary();
+    recommendUniversities(false);
+    renderInteractiveSchedule();
+}
+
+function toggleScheduleTranspose() {
+    state.scheduleTranspose = !state.scheduleTranspose;
+    renderInteractiveSchedule();
+}
+
+function toggleScheduleImage() {
+    const content = document.getElementById('schedule-image-content');
+    const arrow = document.getElementById('schedule-arrow');
+    if (!content) return;
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+        renderInteractiveSchedule();
+    } else {
+        content.style.display = 'none';
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
     }
 }
 
