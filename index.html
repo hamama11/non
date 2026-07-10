@@ -1,50 +1,71 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>논술 지원 시간표 설계기 v2</title>
+    <title>논술 지원 시간표 설계기 v3</title>
     <meta name="description" content="2027학년도 주요 대학 논술 전형 일정을 조건별로 필터링하고 시간표로 시각화하는 설계 도구입니다.">
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script defer src="./app.js"></script>
 </head>
+
 <body>
     <div class="app-wrapper">
-        <header class="app-header" style="display: flex; justify-content: space-between; align-items: center; text-align: left; margin-bottom: 2rem; gap: 2rem; flex-wrap: wrap;">
+        <header class="app-header"
+            style="display: flex; justify-content: space-between; align-items: center; text-align: left; margin-bottom: 2rem; gap: 2rem; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 300px; display: flex; gap: 1rem; align-items: flex-start;">
                 <div>
                     <h1 style="margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem; color: #ffffff;">
-                        🎓 논술 지원 시간표 설계기 v2 <span style="font-size: 0.9rem; background: #F6C9D6; color: #0B5D45; padding: 0.25rem 0.6rem; border-radius: 999px; font-weight: 700; margin-left: 0.5rem; display: inline-block;">SM Smart Match</span>
+                        🎓 논술 지원 시간표 설계기 v3 <span
+                            style="font-size: 0.9rem; background: #F6C9D6; color: #0B5D45; padding: 0.25rem 0.6rem; border-radius: 999px; font-weight: 700; margin-left: 0.5rem; display: inline-block;">SM
+                            Smart Match</span>
                     </h1>
-                    <p style="margin: 0 0 1rem 0; color: #F6C9D6;">Your <span class="success-shine">Success</span> Map for 논술 지원 전략 by SM</p>
-                    <div class="header-links" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                        <button onclick="openSecretPdf()" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
+                    <p style="margin: 0 0 1rem 0; color: #F6C9D6;">Your <span class="success-shine">Success</span> Map
+                        for 논술 지원 전략 by SM</p>
+                    <div class="header-links"
+                        style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <button onclick="openSecretPdf()" class="btn-secondary"
+                            style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
                             📄 백분위별 지원 가능대학
                         </button>
-                        <button onclick="openFortuneModal()" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
+                        <button onclick="openFortuneModal()" class="btn-secondary"
+                            style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
                             🥠 포춘쿠키
                         </button>
                         <div class="contact-popover-wrapper" style="position: relative; display: inline-block;">
-                            <span style="font-size: 1.05rem; font-weight: 700; color: #0F5A43; background-color: #F4C8D2; border: 1px solid #F4C8D2; padding: 0.4rem 0.8rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem; box-shadow: 0 2px 4px rgba(15, 90, 67, 0.1); cursor: pointer;">
+                            <span
+                                style="font-size: 1.05rem; font-weight: 700; color: #0F5A43; background-color: #F4C8D2; border: 1px solid #F4C8D2; padding: 0.4rem 0.8rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem; box-shadow: 0 2px 4px rgba(15, 90, 67, 0.1); cursor: pointer;">
                                 📧 오류제보 및 피드백: 숙명여고 하M
                             </span>
-                            <div class="contact-popover" style="display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 0.5rem; background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 100; width: 180px; text-align: center; flex-direction: column; align-items: center; gap: 0.5rem;">
-                                <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">💬 오픈카톡 오류제보/피드백</div>
-                                <img src="kakao.jpg" alt="오픈카톡 QR" style="width: 120px; height: 120px; border-radius: 0.5rem; border: 1px solid var(--border-color); display: block; margin: 0 auto;">
-                                <a href="https://open.kakao.com/o/s4zcwDyi" target="_blank" style="font-size: 0.75rem; color: #fff; background: #0F5A43; padding: 0.35rem 0.5rem; border-radius: 0.375rem; text-decoration: none; font-weight: 600; display: inline-block; width: 100%; box-sizing: border-box;">오픈카톡 바로가기</a>
+                            <div class="contact-popover"
+                                style="display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 0.5rem; background: var(--bg-card, #fff); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 100; width: 180px; text-align: center; flex-direction: column; align-items: center; gap: 0.5rem;">
+                                <div
+                                    style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">
+                                    💬 오픈카톡 오류제보/피드백</div>
+                                <img src="kakao.jpg" alt="오픈카톡 QR"
+                                    style="width: 120px; height: 120px; border-radius: 0.5rem; border: 1px solid var(--border-color); display: block; margin: 0 auto;">
+                                <a href="https://open.kakao.com/o/s4zcwDyi" target="_blank"
+                                    style="font-size: 0.75rem; color: #fff; background: #0F5A43; padding: 0.35rem 0.5rem; border-radius: 0.375rem; text-decoration: none; font-weight: 600; display: inline-block; width: 100%; box-sizing: border-box;">오픈카톡
+                                    바로가기</a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 1rem;">
-                <div class="dday-card" style="background: rgba(255,255,255,0.07); border: 1px solid rgba(246,201,214,0.3); border-radius: 0.75rem; padding: 1.2rem; width: 330px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.75rem; font-family: var(--font-family); color: #ffffff;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--text-main);">
+                <div class="dday-card"
+                    style="background: rgba(255,255,255,0.07); border: 1px solid rgba(246,201,214,0.3); border-radius: 0.75rem; padding: 1.2rem; width: 330px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.75rem; font-family: var(--font-family); color: #ffffff;">
+                    <div
+                        style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--text-main);">
                         <span>2027 대학수학능력시험</span>
-                        <span style="color: #C2547A; font-weight: 500;" id="dday-header-right">2026.11.19. / D-000</span>
+                        <span style="color: #C2547A; font-weight: 500;" id="dday-header-right">2026.11.19. /
+                            D-000</span>
                     </div>
-                    <div id="dday-numbers" style="font-size: 2rem; font-weight: 900; text-align: center; background: linear-gradient(90deg, #ef4444, #d946ef, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-variant-numeric: tabular-nums;">
+                    <div id="dday-numbers"
+                        style="font-size: 2rem; font-weight: 900; text-align: center; background: linear-gradient(90deg, #ef4444, #d946ef, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-variant-numeric: tabular-nums;">
                         000:00:00:00
                     </div>
                 </div>
@@ -52,17 +73,25 @@
         </header>
 
         <!-- Collapsible Essay Schedule Table -->
-        <div class="schedule-collapse-container" style="margin-bottom: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-            <button id="toggle-schedule-btn" onclick="toggleScheduleImage()" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: none; border: none; font-size: 1.05rem; font-weight: 700; color: var(--text-main); cursor: pointer; text-align: left; font-family: var(--font-family);">
-                <span>📅 2027학년도 논술 일정표 <span style="font-size:0.78rem; font-weight:500; color:var(--text-muted); margin-left:0.5rem;">대학명 클릭 → 시간표에 추가 | 필터 조건 연동</span></span>
-                <span id="schedule-arrow" style="transition: transform 0.2s; display: inline-block; transform: rotate(180deg);">▼</span>
+        <div class="schedule-collapse-container"
+            style="margin-bottom: 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.75rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <button id="toggle-schedule-btn" onclick="toggleScheduleImage()"
+                style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: none; border: none; font-size: 1.05rem; font-weight: 700; color: var(--text-main); cursor: pointer; text-align: left; font-family: var(--font-family);">
+                <span>📅 2027학년도 논술 일정표 <span
+                        style="font-size:0.78rem; font-weight:500; color:var(--text-muted); margin-left:0.5rem;">대학명 클릭
+                        → 시간표에 추가 | 필터 조건 연동</span></span>
+                <span id="schedule-arrow"
+                    style="transition: transform 0.2s; display: inline-block; transform: rotate(180deg);">▼</span>
             </button>
-            <div id="schedule-image-content" style="display: block; border-top: 1px solid var(--border-color); padding: 0.75rem 1rem 1rem; background: var(--bg-main);">
+            <div id="schedule-image-content"
+                style="display: block; border-top: 1px solid var(--border-color); padding: 0.75rem 1rem 1rem; background: var(--bg-main);">
                 <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 0.5rem;">
-                    <button class="btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem;" onclick="toggleScheduleTranspose()">⇄ 행열 전환</button>
+                    <button class="btn-secondary" style="font-size: 0.78rem; padding: 0.25rem 0.65rem;"
+                        onclick="toggleScheduleTranspose()">⇄ 행열 전환</button>
                 </div>
                 <div id="interactive-schedule-table"></div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; text-align: right; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div
+                    style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; text-align: right; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                     <div style="display: flex; gap: 0.75rem; font-weight: 600;">
                         <span>대학 분류 범례:</span>
                         <span style="color: #db2777;">🌸 여대(분홍)</span>
@@ -75,78 +104,97 @@
         </div>
 
         <!-- 맞춤대학 추천 필터 (일정표 외부) -->
-        <div style="margin-bottom: 1.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem 1.25rem; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-            <h2 style="font-size: 1.05rem; font-weight: 800; margin: 0 0 0.75rem 0; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">🎯 맞춤대학 추천</h2>
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: stretch; justify-content: space-between;">
-                <!-- 계열 선택 -->
-                <div style="flex: 1.1; min-width: 170px; display: flex; flex-direction: column; gap: 4px;">
-                    <div style="font-weight: 700; font-size: 0.78rem; color: var(--text-main);">🎓 계열</div>
-                    <div class="track-buttons" style="display: flex; gap: 3px; flex-wrap: wrap;">
-                        <label class="track-btn" style="padding: 0.22rem 0.45rem; font-size: 0.72rem; margin:0;"><input type="radio" name="track" value="상관없음" checked onchange="handleFilterChange()"><span>전체</span></label>
-                        <label class="track-btn" style="padding: 0.22rem 0.45rem; font-size: 0.72rem; margin:0;"><input type="radio" name="track" value="인문" onchange="handleFilterChange()"><span>인문</span></label>
-                        <label class="track-btn" style="padding: 0.22rem 0.45rem; font-size: 0.72rem; margin:0;"><input type="radio" name="track" value="자연" onchange="handleFilterChange()"><span>자연</span></label>
-                        <label class="track-btn" style="padding: 0.22rem 0.45rem; font-size: 0.72rem; margin:0;"><input type="radio" name="track" value="의약" onchange="handleFilterChange()"><span>의약학</span></label>
-                        <label class="track-btn" style="padding: 0.22rem 0.45rem; font-size: 0.72rem; margin:0;"><input type="radio" name="track" value="약술형" onchange="handleFilterChange()"><span>약술형</span></label>
-                    </div>
+        <div class="no-print"
+            style="margin-bottom: 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.6rem 1rem; box-shadow: 0 2px 6px rgba(15, 90, 67, 0.04);">
+            <div
+                style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between;">
+            
+                <!-- 타이틀 (인라인 배치) -->
+                <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 130px;">
+                    <h2 style="font-size: 0.9rem; font-weight: 800; margin: 0; color: var(--text-main); white-space: nowrap;">🎯 맞춤 필터</h2>
                 </div>
-                <!-- 수리논술 -->
-                <div style="flex: 2.2; min-width: 290px; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0 1rem; display: flex; flex-direction: column; gap: 4px;">
-                    <div style="font-weight: 700; font-size: 0.78rem; color: var(--text-main);">📐 수리논술 범위</div>
-                    <div style="display: flex; flex-direction: column; gap: 2px;">
-                        <div style="display:flex; align-items:center; gap: 6px;">
-                            <span style="font-size:0.7rem; min-width:40px; color:var(--text-muted);">미적분</span>
-                            <div style="display:flex; gap:2px;">
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="미적" value="포함" onchange="handleFilterChange()"><span>포함</span></label>
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="미적" value="불포함" checked onchange="handleFilterChange()"><span>불포함</span></label>
+                
+                <!-- 필터 항목들 (인라인 가로 정렬) -->
+                <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; flex: 1;">
+                    
+                    <!-- 수리논술 필터 (자연/의약 전용) -->
+                    <div style="background: rgba(79,70,229,0.04); border: 1.5px solid rgba(79,70,229,0.2); border-radius: 0.4rem; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: 800; font-size: 0.7rem; color: #4f46e5; white-space: nowrap; border-right: 1.5px solid rgba(79,70,229,0.2); padding-right: 8px; margin-right: 2px;">📐 수리</span>
+                        
+                        <!-- 미적분 -->
+                        <div style="display: flex; align-items: center; gap: 3px;">
+                            <span style="font-size: 0.68rem; font-weight: 700; color: #dc2626; background: rgba(220,38,38,0.08); padding: 1px 4px; border-radius: 3px; white-space: nowrap;">미적</span>
+                            <div style="display: flex; gap: 1px; background: rgba(220,38,38,0.06); padding: 1px 2px; border-radius: 4px; border: 1px solid rgba(220,38,38,0.15);">
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="미적" value="무관" checked onchange="handleFilterChange()"><span>무관</span></label>
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="미적" value="포함" onchange="handleFilterChange()"><span style="color:#dc2626;">포함</span></label>
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="미적" value="불포함" onchange="handleFilterChange()"><span>제외</span></label>
                             </div>
                         </div>
-                        <div style="display:flex; align-items:center; gap: 6px;">
-                            <span style="font-size:0.7rem; min-width:40px; color:var(--text-muted);">확통</span>
-                            <div style="display:flex; gap:2px;">
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="확통" value="상" onchange="handleFilterChange()"><span>상</span></label>
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="확통" value="중상" onchange="handleFilterChange()"><span>중상</span></label>
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="확통" value="중" onchange="handleFilterChange()"><span>중</span></label>
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="확통" value="불포함" checked onchange="handleFilterChange()"><span>불포함</span></label>
+                        
+                        <span style="color:rgba(79,70,229,0.25); font-size:0.8rem;">|</span>
+                        
+                        <!-- 확률과 통계 -->
+                        <div style="display: flex; align-items: center; gap: 3px;">
+                            <span style="font-size: 0.68rem; font-weight: 700; color: #ea580c; background: rgba(234,88,12,0.08); padding: 1px 4px; border-radius: 3px; white-space: nowrap;">확통</span>
+                            <div style="display: flex; gap: 1px; background: rgba(234,88,12,0.06); padding: 1px 2px; border-radius: 4px; border: 1px solid rgba(234,88,12,0.15);">
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="확통" value="무관" checked onchange="handleFilterChange()"><span>무관</span></label>
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="확통" value="포함" onchange="handleFilterChange()"><span style="color:#ea580c;">포함</span></label>
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="확통" value="불포함" onchange="handleFilterChange()"><span>제외</span></label>
                             </div>
                         </div>
-                        <div style="display:flex; align-items:center; gap: 6px;">
-                            <span style="font-size:0.7rem; min-width:40px; color:var(--text-muted);">기하</span>
-                            <div style="display:flex; gap:2px;">
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="기하" value="상" onchange="handleFilterChange()"><span>상</span></label>
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="기하" value="중상" onchange="handleFilterChange()"><span>중상</span></label>
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="기하" value="중" onchange="handleFilterChange()"><span>중</span></label>
-                                <label class="level-btn" style="font-size:0.68rem; padding:1px 4px;"><input type="radio" name="기하" value="불포함" checked onchange="handleFilterChange()"><span>불포함</span></label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- 언어논술 -->
-                <div style="flex: 2; min-width: 270px; display: flex; flex-direction: column; gap: 4px;">
-                    <div style="font-weight: 700; font-size: 0.78rem; color: var(--text-main);">📝 언어논술 / 제시문</div>
-                    <div style="display: flex; flex-direction: column; gap: 3px;">
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size:0.7rem; min-width:35px; color:var(--text-muted);">답안</span>
-                            <div style="display:flex; flex-wrap:wrap; gap:3px;">
-                                <label class="cb-label" style="font-size:0.68rem; padding:1px 4px; margin:0;"><input type="checkbox" class="ans-cb" value="장문" onchange="handleFilterChange()"><span>장문(800자↑)</span></label>
-                                <label class="cb-label" style="font-size:0.68rem; padding:1px 4px; margin:0;"><input type="checkbox" class="ans-cb" value="분할" onchange="handleFilterChange()"><span>분할(600~800)</span></label>
-                                <label class="cb-label" style="font-size:0.68rem; padding:1px 4px; margin:0;"><input type="checkbox" class="ans-cb" value="쪼개기" onchange="handleFilterChange()"><span>쪼개기(200~500)</span></label>
-                                <label class="cb-label" style="font-size:0.68rem; padding:1px 4px; margin:0;"><input type="checkbox" class="ans-cb" value="자유" onchange="handleFilterChange()"><span>자유(분량자율)</span></label>
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size:0.7rem; min-width:35px; color:var(--text-muted);">제시문</span>
-                            <div style="display:flex; flex-wrap:wrap; gap:3px;">
-                                <label class="cb-label" style="font-size:0.68rem; padding:1px 4px; margin:0;"><input type="checkbox" class="type-cb" value="통계" onchange="handleFilterChange()"><span>통계</span></label>
-                                <label class="cb-label" style="font-size:0.68rem; padding:1px 4px; margin:0;"><input type="checkbox" class="type-cb" value="도표" onchange="handleFilterChange()"><span>도표</span></label>
-                                <label class="cb-label" style="font-size:0.68rem; padding:1px 4px; margin:0;"><input type="checkbox" class="type-cb" value="수학" onchange="handleFilterChange()"><span>수리</span></label>
-                                <label class="cb-label" style="font-size:0.68rem; padding:1px 4px; margin:0;"><input type="checkbox" class="type-cb" value="영어" onchange="handleFilterChange()"><span>영어</span></label>
+                        
+                        <span style="color:rgba(79,70,229,0.25); font-size:0.8rem;">|</span>
+                        
+                        <!-- 기하 -->
+                        <div style="display: flex; align-items: center; gap: 3px;">
+                            <span style="font-size: 0.68rem; font-weight: 700; color: #0891b2; background: rgba(8,145,178,0.08); padding: 1px 4px; border-radius: 3px; white-space: nowrap;">기하</span>
+                            <div style="display: flex; gap: 1px; background: rgba(8,145,178,0.06); padding: 1px 2px; border-radius: 4px; border: 1px solid rgba(8,145,178,0.15);">
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="기하" value="무관" checked onchange="handleFilterChange()"><span>무관</span></label>
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="기하" value="포함" onchange="handleFilterChange()"><span style="color:#0891b2;">포함</span></label>
+                                <label class="level-btn" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="radio" name="기하" value="불포함" onchange="handleFilterChange()"><span>제외</span></label>
                             </div>
                         </div>
                     </div>
+
+                    <!-- 언어논술 / 제시문 필터 (인문 전용) -->
+                    <div style="background: rgba(190, 58, 99, 0.03); border: 1.5px solid rgba(190, 58, 99, 0.2); border-radius: 0.4rem; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-weight: 800; font-size: 0.7rem; color: #be3a63; white-space: nowrap; border-right: 1.5px solid rgba(190,58,99,0.2); padding-right: 8px; margin-right: 2px;">📝 언어</span>
+                        <!-- 답안 유형 -->
+                        <div style="display: flex; align-items: center; gap: 3px;">
+                            <span style="font-size: 0.65rem; font-weight: 700; color: #be3a63; white-space: nowrap;">답안</span>
+                            <div style="display: flex; gap: 2px;">
+                                <label class="cb-label" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="checkbox" class="ans-cb" value="장문형" onchange="handleFilterChange()"><span>장문 (800자 이상)</span></label>
+                                <label class="cb-label" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="checkbox" class="ans-cb" value="중문형" onchange="handleFilterChange()"><span>중문 (600~800자)</span></label>
+                                <label class="cb-label" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="checkbox" class="ans-cb" value="단문형" onchange="handleFilterChange()"><span>단문 (200~500자)</span></label>
+                                <label class="cb-label" style="font-size: 0.6rem; padding: 1px 4px; margin:0;"><input type="checkbox" class="ans-cb" value="자유형" onchange="handleFilterChange()"><span>자유</span></label>
+                            </div>
+                        </div>
+                        <!-- 제시문 유형 -->
+                        <div style="display: flex; align-items: center; gap: 3px; border-left: 1px solid rgba(190,58,99,0.15); padding-left: 6px;">
+                            <span style="font-size: 0.65rem; font-weight: 700; color: #be3a63; white-space: nowrap;">제시문</span>
+                            <div style="display: flex; gap: 2px;">
+                                <label class="cb-label" style="font-size: 0.6rem; padding: 1px 3px; margin:0;"><input type="checkbox" class="type-cb" value="통계" onchange="handleFilterChange()"><span>통계</span></label>
+                                <label class="cb-label" style="font-size: 0.6rem; padding: 1px 3px; margin:0;"><input type="checkbox" class="type-cb" value="수리" onchange="handleFilterChange()"><span>수리</span></label>
+                                <label class="cb-label" style="font-size: 0.6rem; padding: 1px 3px; margin:0;"><input type="checkbox" class="type-cb" value="영어" onchange="handleFilterChange()"><span>영어</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 약술형 필터 -->
+                    <div style="background: rgba(107, 63, 160, 0.03); border: 1.5px solid rgba(107, 63, 160, 0.2); border-radius: 0.4rem; padding: 0.35rem 0.65rem; display: flex; align-items: center; gap: 4px;">
+                        <label class="cb-label" style="font-size: 0.65rem; padding: 2px 6px; margin:0; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                            <input type="checkbox" class="type-cb" value="약술형" onchange="handleFilterChange()">
+                            <span style="font-weight: 800; color: #6b3fa0;">약술형 전형만</span>
+                        </label>
+                    </div>
                 </div>
-                <!-- 초기화 버튼 (추천 버튼 제거됨) -->
-                <div style="flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
-                    <button class="btn-secondary" style="font-size: 0.72rem; padding: 0.4rem 0.8rem;" onclick="resetFilters()">초기화 ↺</button>
+
+                <!-- 초기화 버튼 -->
+                <div style="display: flex; align-items: center;">
+                    <button class="btn-secondary" style="font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 0.35rem; display: flex; align-items: center; gap: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+                        onclick="resetFilters()">
+                        초기화 ↺
+                    </button>
                 </div>
             </div>
         </div>
@@ -181,12 +229,14 @@
                 </div>
 
 
-             </aside>
+            </aside>
 
-            <!-- Right Timetable Area -->
             <section class="timetable-area">
                 <div class="timetable-header">
-                    <h2>📅 나의 모의 계획표</h2>
+                    <h2>📅 나의 모의 계획표
+                        <span id="timetable-count-badge"
+                            style="display:none; font-size:0.75rem; background:#F4C8D2; color:#0F5A43; padding:0.2rem 0.65rem; border-radius:999px; font-weight:700; margin-left:0.5rem; vertical-align:middle;"></span>
+                    </h2>
                     <div>
                         <button class="btn-secondary" onclick="addNewTimetable()">＋ 새 시간표</button>
                         <button class="btn-primary" onclick="window.print()">🖨️ 인쇄</button>
@@ -203,8 +253,10 @@
 
                 <!-- 요약 패널 -->
                 <div class="summary-panel" id="summary-panel" style="display:none;">
-                    <div class="summary-title">📊 모의 지원 대학 요약 (On 상태 대학만)</div>
-                    <div class="summary-grid" id="summary-body"></div>
+                    <div class="summary-title">📊 모의 지원 대학 요약 <span
+                            style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">(ON 상태 대학만 · 일자순
+                            정렬)</span></div>
+                    <div id="summary-body" style="overflow-x:auto;"></div>
                 </div>
 
                 <!-- 주의 사항 -->
@@ -213,19 +265,25 @@
                 </div>
             </section>
         </div>
-        <footer class="app-footer" style="margin-top: 3rem; padding: 2.5rem 1.5rem; text-align: center; border-top: 1px solid #F4C8D2;">
-            <div style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
-                <div style="font-size: 1.25rem; font-weight: 800; letter-spacing: 0.05em; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
+        <footer class="app-footer"
+            style="margin-top: 3rem; padding: 2.5rem 1.5rem; text-align: center; border-top: 1px solid #F4C8D2;">
+            <div
+                style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+                <div
+                    style="font-size: 1.25rem; font-weight: 800; letter-spacing: 0.05em; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
                     <span>SMART MATCH</span>
                     <span style="color: #F4C8D2; font-weight: 300;">|</span>
                     <span class="success-shine" style="font-size: 1.25rem;">Success Map</span>
                 </div>
-                <div style="width: 40px; height: 2px; background: #F4C8D2; border-radius: 1px; margin: 0.25rem 0;"></div>
-                <p style="font-size: 0.88rem; color: var(--text-muted); font-weight: 500; line-height: 1.7; margin: 0; letter-spacing: -0.01em;">
+                <div style="width: 40px; height: 2px; background: #F4C8D2; border-radius: 1px; margin: 0.25rem 0;">
+                </div>
+                <p
+                    style="font-size: 0.88rem; color: var(--text-muted); font-weight: 500; line-height: 1.7; margin: 0; letter-spacing: -0.01em;">
                     숙명의 진학 지도 노하우와 정밀한 전형 매칭 기술로,<br>
                     <span style="color: var(--text-main); font-weight: 700;">나에게 맞는 논술 지원 로드맵을 설계합니다.</span>
                 </p>
-                <div style="width: 40px; height: 1px; background: #F4C8D2; border-radius: 1px; margin: 0.25rem 0;"></div>
+                <div style="width: 40px; height: 1px; background: #F4C8D2; border-radius: 1px; margin: 0.25rem 0;">
+                </div>
                 <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">
                     © 2027 SM IP-MATCHING LAB. All rights reserved. 본 서비스는 비영리 학습 보조 도구입니다.
                 </p>
@@ -233,47 +291,84 @@
         </footer>
     </div>
     <!-- Welcome Modal -->
-    <div id="welcome-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(4px);">
-        <div style="background: var(--bg-card, #fff); padding: 1.25rem; border-radius: 1rem; text-align: left; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid var(--border-color);">
+    <div id="welcome-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(4px);">
+        <div
+            style="background: var(--bg-card, #fff); padding: 1.25rem; border-radius: 1rem; text-align: left; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid var(--border-color);">
             <div style="text-align: center; margin-bottom: 1rem;">
-                <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.4rem 0; color: var(--text-main);">🎓 논술 지원 시간표 설계기 v2 <span style="font-size: 0.75rem; background: #F6C9D6; color: #0B5D45; padding: 0.15rem 0.4rem; border-radius: 999px; vertical-align: middle;">SM Smart Match</span></h2>
-                <p style="font-size: 0.95rem; font-weight: 700; color: var(--primary); margin: 0;">"수시 6논술, 합격 로드맵 짜기!"</p>
+                <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.4rem 0; color: var(--text-main);">🎓 논술
+                    지원 시간표 설계기 v3 <span
+                        style="font-size: 0.75rem; background: #F6C9D6; color: #0B5D45; padding: 0.15rem 0.4rem; border-radius: 999px; vertical-align: middle;">SM
+                        Smart Match</span></h2>
+                <p style="font-size: 0.95rem; font-weight: 700; color: var(--primary); margin: 0;">"수시 6논술, 합격 로드맵 짜기!"
+                </p>
             </div>
 
-            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0.8rem 0 0.35rem 0; color: var(--text-main);">🌟 주요 기능</h3>
-            <ul style="font-size: 0.82rem; line-height: 1.45; padding-left: 1.1rem; color: var(--text-muted); margin-bottom: 0.8rem; list-style-type: disc;">
-                <li style="margin-bottom: 0.25rem;"><strong>대학 검색 및 시간표</strong>: 원하는 대학을 담으면 우측 시간표에 일정이 시각화됩니다.</li>
-                <li style="margin-bottom: 0.25rem;"><strong>맞춤 대학 추천</strong>: 내 조건(계열, 수리범위 등)을 필터링해 유리한 대학을 추천받고 바로 담습니다.</li>
-                <li><strong>시간표 탭 & 인쇄</strong>: 여러 시간표 안을 탭으로 비교하고, 완료된 시간표를 인쇄할 수 있습니다.</li>
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0.8rem 0 0.5rem 0; color: var(--text-main); display: flex; align-items: center; gap: 0.35rem;">
+                🔄 지속적으로 진화하는 주요 기능 및 업데이트 (v3)
+            </h3>
+            <ul style="font-size: 0.82rem; line-height: 1.5; padding-left: 1.1rem; color: var(--text-muted); margin-bottom: 0.8rem; list-style-type: disc;">
+                <li style="margin-bottom: 0.4rem;">
+                    <strong>최신 DB 통합 업데이트 <span style="color:#0B5D45; font-weight:700; font-size:0.75rem;">[v3 최신]</span></strong>
+                    <div style="font-size:0.75rem; margin-top:1px; color:var(--text-muted);">2025학년도 약술형 논술 대학별 계열 통합 시트를 포함한 data.csv 최신 DB 전면 병합 완료.</div>
+                </li>
+                <li style="margin-bottom: 0.4rem;">
+                    <strong>계열별 필터 조건 분리 <span style="color:#0B5D45; font-weight:700; font-size:0.75rem;">[v3 최신]</span></strong>
+                    <div style="font-size:0.75rem; margin-top:1px; color:var(--text-muted);">수리 필터는 자연/의약에만, 언어 필터는 인문 전형에만 각각 맞춤형으로 상호 배타적 필터가 적용되도록 로직 개선.</div>
+                </li>
+                <li style="margin-bottom: 0.4rem;">
+                    <strong>답안 길이(글자 수) 표시 및 필터 개선 <span style="color:#0B5D45; font-weight:700; font-size:0.75rem;">[v3 최신]</span></strong>
+                    <div style="font-size:0.75rem; margin-top:1px; color:var(--text-muted);">장문(800자 이상)/중문(600~800자)/단문(200~500자) 등 답안 분량을 직관적으로 확인하고 필터링하도록 고도화. (제시문 필터 도표 항목 제거)</div>
+                </li>
+                <li style="margin-bottom: 0.4rem;">
+                    <strong>수리 필터 정합성 확보 <span style="color:#0b5d45; font-weight:700; font-size:0.75rem;">[v3 개선]</span></strong>
+                    <div style="font-size:0.75rem; margin-top:1px; color:var(--text-muted);">수Ⅰ/수Ⅱ 범위 전형(성균관대 수리형 등)의 미적/확통/기하 제외 및 포함 필터링 매칭 오류 완벽 해결.</div>
+                </li>
+                <li style="margin-bottom: 0.4rem;">
+                    <strong>지능형 맞춤 대학 조건 추천 및 전체 담기 <span style="color:var(--text-muted); font-size:0.75rem;">[v2]</span></strong>
+                    <div style="font-size:0.75rem; margin-top:1px; color:var(--text-muted);">계열, 수리 과목 범위(미적/확통/기하) 조건에 맞는 맞춤형 대학을 즉시 추천하고 원클릭으로 계획표에 대량 등록 가능.</div>
+                </li>
+                <li style="margin-bottom: 0.4rem;">
+                    <strong>대학 검색 및 시간표 시각화 (Transposed 캘린더) <span style="color:var(--text-muted); font-size:0.75rem;">[v1~v2]</span></strong>
+                    <div style="font-size:0.75rem; margin-top:1px; color:var(--text-muted);">대학명 검색 및 클릭으로 캘린더 일정표 즉시 연동. 오전/오후/저녁 타임라인 배치 및 일자별 정렬 요약 지원.</div>
+                </li>
+                <li style="margin-bottom: 0.4rem;">
+                    <strong>다중 계획표 설계용 탭(Tabs) 및 인쇄 기능 <span style="color:var(--text-muted); font-size:0.75rem;">[v2]</span></strong>
+                    <div style="font-size:0.75rem; margin-top:1px; color:var(--text-muted);">여러 개의 가안 시간표를 동시 생성 및 탭으로 전환 관리하고, 최종 설계본의 깔끔한 종이 인쇄 레이아웃 지원.</div>
+                </li>
             </ul>
 
-            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0.8rem 0 0.35rem 0; color: var(--text-main);">📢 업데이트 내역</h3>
-            <ul style="font-size: 0.82rem; line-height: 1.45; padding-left: 1.1rem; color: var(--text-muted); margin-bottom: 0.8rem; list-style-type: disc;">
-                <li style="margin-bottom: 0.25rem;"><strong>의약학 계열 지원</strong>: '의약학' 필터 버튼 및 전형 정보 추가</li>
-                <li style="margin-bottom: 0.25rem;"><strong>약술형 논술 필터</strong>: 제시문 유형에 '약술형' 및 관련 대학 데이터 업데이트</li>
-                <li><strong>추천/일정표 연동 강화</strong>: 추천 전체 담기 및 일정표 클릭 직접 담기(서브타입 구분) 연동</li>
-            </ul>
-
-            <div style="background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b; padding: 0.5rem 0.75rem; font-size: 0.78rem; color: #b45309; margin-bottom: 0.8rem; border-radius: 0 0.25rem 0.25rem 0; line-height: 1.35;">
+            <div
+                style="background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b; padding: 0.5rem 0.75rem; font-size: 0.78rem; color: #b45309; margin-bottom: 0.8rem; border-radius: 0 0.25rem 0.25rem 0; line-height: 1.35;">
                 ⚠️ 제공되는 일정은 모의 계획용 가안입니다. 원서 접수 전 반드시 <strong>최종 모집 요강</strong>을 확인하세요.
             </div>
 
             <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
-                <button class="btn-primary" onclick="closeWelcomeModal()" style="padding: 0.6rem 2rem; font-size: 0.95rem; font-weight: 700; width: 100%;">시작하기 🚀</button>
+                <button class="btn-primary" onclick="closeWelcomeModal()"
+                    style="padding: 0.6rem 2rem; font-size: 0.95rem; font-weight: 700; width: 100%;">시작하기 🚀</button>
             </div>
         </div>
     </div>
     <!-- Fortune Cookie Modal -->
-    <div id="fortune-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px);">
-        <div style="background: var(--bg-card, #fff); padding: 2rem; border-radius: 1rem; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid var(--border-color);">
-            <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">🥠 오늘을 위한 응원</h3>
-            <p id="fortune-modal-text" style="font-size: 1.05rem; line-height: 1.6; color: var(--primary); font-weight: 700; margin: 1.5rem 0; min-height: 3rem; display: flex; align-items: center; justify-content: center; padding: 0.5rem; background: var(--bg-main); border-radius: 0.5rem; transition: opacity 0.2s;"></p>
+    <div id="fortune-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px);">
+        <div
+            style="background: var(--bg-card, #fff); padding: 2rem; border-radius: 1rem; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid var(--border-color);">
+            <h3
+                style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                🥠 오늘을 위한 응원</h3>
+            <p id="fortune-modal-text"
+                style="font-size: 1.05rem; line-height: 1.6; color: var(--primary); font-weight: 700; margin: 1.5rem 0; min-height: 3rem; display: flex; align-items: center; justify-content: center; padding: 0.5rem; background: var(--bg-main); border-radius: 0.5rem; transition: opacity 0.2s;">
+            </p>
             <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem;">
-                <button class="btn-primary" onclick="crackCookieModal()" style="padding: 0.5rem 1.2rem; font-size: 0.85rem;">🥠 다른 쿠키 열기</button>
-                <button class="btn-secondary" onclick="closeFortuneModal()" style="padding: 0.5rem 1.2rem; font-size: 0.85rem;">닫기</button>
+                <button class="btn-primary" onclick="crackCookieModal()"
+                    style="padding: 0.5rem 1.2rem; font-size: 0.85rem;">🥠 다른 쿠키 열기</button>
+                <button class="btn-secondary" onclick="closeFortuneModal()"
+                    style="padding: 0.5rem 1.2rem; font-size: 0.85rem;">닫기</button>
             </div>
         </div>
     </div>
     <script src="app.js"></script>
 </body>
+
 </html>
