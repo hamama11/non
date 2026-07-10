@@ -57,7 +57,7 @@ body {
 
 .main-layout {
     display: grid;
-    grid-template-columns: 360px 1fr;
+    grid-template-columns: 260px minmax(0, 1fr);
     gap: 1.5rem;
 }
 
@@ -540,6 +540,69 @@ button {
     margin-bottom: 0.25rem;
 }
 
+/* Summary Table */
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin-top: 0.25rem;
+}
+
+.summary-table th {
+    background: linear-gradient(135deg, #f0fdf4 0%, #fdf2f6 100%);
+    color: var(--text-main);
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--border-color);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.summary-table td {
+    padding: 0.5rem 0.65rem;
+    border: 1px solid #f0e8ed;
+    vertical-align: middle;
+    line-height: 1.45;
+}
+
+.summary-table tbody tr:nth-child(even) {
+    background-color: #fdf9fb;
+}
+
+.summary-table tbody tr:hover {
+    background-color: #fdf2f6;
+    transition: background 0.15s;
+}
+
+.summary-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 999px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.badge-math {
+    background-color: #818cf8;
+    color: white;
+}
+
+.badge-min {
+    background-color: #f59e0b;
+    color: white;
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 0.3rem;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .notice-box {
     margin-top: 1.5rem;
     font-size: 0.8rem;
@@ -659,6 +722,7 @@ button {
 .timetable-bg-wrapper {
     position: relative;
     min-height: 200px;
+    overflow-x: auto;
 }
 .timetable-bg-wrapper::before {
     content: '';
@@ -729,4 +793,124 @@ button {
 
 @media print {
     .character-float-wrapper { display: none; }
+
+    /* 인쇄 시 배경/색상 보존 */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 인쇄 시 숨길 영역 */
+    .app-header,
+    .schedule-collapse-container,
+    .filter-panel,
+    .notice-box,
+    .app-footer,
+    .timetable-tabs,
+    .no-print,
+    #welcome-modal,
+    #fortune-modal {
+        display: none !important;
+    }
+
+    /* main-layout: 왼쪽 패널 숨기고 오른쪽만 표시 */
+    .main-layout {
+        display: block !important;
+    }
+
+    .filter-panel {
+        display: none !important;
+    }
+
+    /* 전체 배경 흰색 */
+    body {
+        background: white !important;
+        padding: 0.5rem !important;
+    }
+
+    .app-wrapper {
+        max-width: 100% !important;
+    }
+
+    .timetable-area {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0.5rem !important;
+        width: 100% !important;
+    }
+
+    /* 시간표 제목은 보이게 */
+    .timetable-header {
+        display: flex !important;
+        margin-bottom: 0.75rem;
+    }
+
+    .timetable-header button {
+        display: none !important;
+    }
+
+    /* 테이블 인쇄 최적화 */
+    .tt-table {
+        width: 100% !important;
+        font-size: 0.8rem !important;
+        border-collapse: collapse !important;
+    }
+
+    .tt-table th,
+    .tt-table td {
+        border: 1px solid #ccc !important;
+        padding: 0.3rem !important;
+        vertical-align: top !important;
+    }
+
+    /* 카드 인쇄 최적화 */
+    .timetable-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        margin-bottom: 4px !important;
+        padding: 0.4rem !important;
+    }
+
+    /* OFF 카드는 인쇄에서 숨기기 */
+    .timetable-card.off {
+        display: none !important;
+    }
+
+    /* 카드 상세 정보 (수리/언어논술) 인쇄 시 표시 */
+    .card-print-detail {
+        display: block !important;
+        font-size: 0.68rem !important;
+        color: #444 !important;
+        margin-top: 2px !important;
+    }
+
+    /* 배지 색상 강제 출력 */
+    [style*="background-color:#818cf8"],
+    [style*="background-color:#f43f5e"],
+    [style*="background-color:#f59e0b"] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 요약 패널 인쇄 최적화 */
+    .summary-panel {
+        margin-top: 1rem !important;
+        break-before: auto !important;
+    }
+
+    .summary-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+
+    /* 페이지 여백 설정 */
+    @page {
+        margin: 1.5cm 1cm;
+        size: A4 landscape;
+    }
 }
+

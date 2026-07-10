@@ -4,13 +4,13 @@
 function normalizeMath(raw) {
     if (!raw) return '해당없음';
     let trimmed = raw.trim();
-    if (['없음', '해당 없음', '해당없음', '신설', ''].includes(trimmed)) return '해당없음';
+    if (['없음', '해당 없음', '해당없음', '해당없음', '신설', '정보 없음', ''].includes(trimmed)) return '해당없음';
     
     trimmed = trimmed.replace(/미적분/g, '미적')
                      .replace(/확률과\s*통계/g, '확통')
                      .replace(/확률과통계/g, '확통');
 
-    if ((trimmed.includes('수Ⅰ') || trimmed.includes('수I')) && !trimmed.includes('미적') && !trimmed.includes('확통') && !trimmed.includes('기하')) return '해당없음';
+    // 수I, 수II만 있고 미적/확통/기하가 없더라도 수리 범위를 나타내도록 그대로 처리 (기존에 해당없음으로 강제 리턴하던 조건 제거)
     
     let result = trimmed.replace(/\(어려움\)/g, '(상)');
     const parts = result.split(',').map(p => p.trim());
@@ -23,46 +23,91 @@ function normalizeMath(raw) {
     return normalized.join(', ');
 }
 
-function normalizeAnswer(raw) {
-    if (!raw) return '해당없음';
+/**
+ * 새 CSV의 "언어논술 제시문 및 답안 유형" 컬럼을 파싱
+ * 반환: { present: string, answerType: string, answerLength: string }
+ * present: 제시문 종류(통계, 영어, 수리형, 약술형 등)
+ * answerType: 장문형/중문형/단문형/자유형/약술형/수리형
+ * answerLength: 분량 정보 (국N/수N, 800자 이상, 600~800자 등)
+ */
+function parseEssayColumn(raw) {
+    if (!raw) return { present: '', answerType: '', answerLength: '' };
     const trimmed = raw.trim();
-    if (['없음', '해당 없음', '해당없음', '신설', ''].includes(trimmed)) return '해당없음';
-    if (trimmed.includes('/')) {
-        const sub = trimmed.split('/').map(s => normalizeAnswer(s.trim())).filter(s => s !== '해당없음');
-        return sub.length > 0 ? sub.join('/') : '해당없음';
+    if (['없음', '해당 없음', '해당없음', '신설', '정보 없음', ''].includes(trimmed)) {
+        return { present: '', answerType: '', answerLength: '' };
     }
-    if (trimmed.includes('장문')) return '장문형';
-    if (trimmed.includes('분할')) return '분할형';
-    if (trimmed.includes('쪼개기') || trimmed.includes('200')) return '쪼개기형';
-    if (trimmed.includes('자유')) return '자유형';
-    return '해당없음';
+
+    let present = '';
+    let answerType = '';
+    let answerLength = '';
+
+    // 약술형 특수 처리 (국N / 수N)
+    const yakSulMatch = raw.match(/약술형\s*\(([^)]+)\)/);
+    if (yakSulMatch) {
+        answerType = '약술형';
+        answerLength = yakSulMatch[1].trim();
+    } else if (raw.includes('약술형')) {
+        answerType = '약술형';
+    }
+
+    // 제시문 유형 파싱
+    if (raw.includes('통계')) present += (present ? '+' : '') + '통계';
+    if (raw.includes('영어 제시문') || raw.includes('영어')) present += (present ? '+' : '') + '영어';
+    if (raw.includes('도표')) present += (present ? '+' : '') + '도표';
+    if (raw.includes('수리형') || raw.includes('수리')) present += (present ? '+' : '') + '수리';
+
+    // 답안 유형 파싱 (약술형이 아닌 경우)
+    if (!answerType) {
+        if (raw.includes('장문형')) answerType = '장문형';
+        else if (raw.includes('중문형')) answerType = '중문형';
+        else if (raw.includes('단문형')) answerType = '단문형';
+        else if (raw.includes('자유형')) answerType = '자유형';
+        else if (raw.includes('수리형')) answerType = '수리형';
+    }
+
+    // 분량 파싱 (약술형이 아닌 경우)
+    if (!answerLength) {
+        const lengthMatch = raw.match(/[（(]([^）)]*(?:자|글자)[^）)]*)[）)]/);
+        if (lengthMatch) answerLength = lengthMatch[1].trim();
+    }
+
+    return { present, answerType, answerLength };
 }
 
 function normalizeData(raw) {
-    return raw.map((row, idx) => ({
-        ...row,
-        '_rowIdx': idx,
-        '_수리정규화': normalizeMath(row['수리논술 범위/난이도']),
-        '_답안정규화': normalizeAnswer(row['인문논술 답안 유형/분량']),
-    }));
+    return raw.map((row, idx) => {
+        // 새 CSV 컬럼명: '언어논술 제시문 및 답안 유형', '수리논술 범위 및 난이도'
+        const essayRaw = row['언어논술 제시문 및 답안 유형'] || '';
+        const mathRaw = row['수리논술 범위 및 난이도'] || '';
+        const parsed = parseEssayColumn(essayRaw);
+        return {
+            ...row,
+            '_rowIdx': idx,
+            '_수리정규화': normalizeMath(mathRaw),
+            '_제시문': parsed.present,
+            '_답안유형': parsed.answerType,
+            '_답안분량': parsed.answerLength,
+            '_언어논술원문': essayRaw,
+        };
+    });
 }
 
 function determineTracks(row) {
     const dept = row['모집계열 및 세부 학과'] || '';
     const uName = row['대학명'] || '';
-    const ansNorm = row['_답안정규화'] || '해당없음';
+    const ansType = row['_답안유형'] || '';
     const mathNorm = row['_수리정규화'] || '해당없음';
 
-    // 성균관대 특수 처리: 수리형은 자연, 언어형은 언어로 분류
+    // 성균관대 특수 처리: 수리형은 자연, 언어형은 인문으로 분류
     if (uName.includes('성균관')) {
-        if (dept.includes('언어형')) return ['언어'];
+        if (dept.includes('언어형')) return ['인문'];
         if (dept.includes('수리형')) return ['자연'];
     }
 
     const tracks = new Set();
 
     const hasMath = (mathNorm !== '해당없음' && mathNorm !== '');
-    const hasHuman = (ansNorm !== '해당없음' && ansNorm !== '');
+    const hasHuman = ansType !== '';
 
     const isMed = dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('약학부') || dept.includes('한의예') || dept.includes('수의예') || dept.includes('의약');
     const isBusiness = dept.includes('경영') || dept.includes('경제') || dept.includes('상경') || dept.includes('경상');
@@ -111,7 +156,8 @@ const state = {
     timetables: [{ id: 0, name: '시간표 1', univs: [], manualOverrides: {} }],
     activeTimetableId: 0,
     currentRecommendations: {},
-    scheduleTranspose: true
+    scheduleTranspose: true,
+    summarySort: { column: '고사 일자', asc: true }
 };
 
 const DATA_URL = './data.csv';
@@ -209,17 +255,17 @@ async function init() {
 
 // ===== 필터 값 가져오기 =====
 function getFilters() {
-    const trackVal = document.querySelector('input[name="track"]:checked')?.value || '상관없음';
-    const getMathLevel = key => document.querySelector(`input[name="${key}"]:checked`)?.value || '불포함';
+    const getMathLevel = key => document.querySelector(`input[name="${key}"]:checked`)?.value || '무관';
     const getChecked = selector => [...document.querySelectorAll(selector + ':checked')].map(c => c.value);
 
     return {
-        계열: trackVal,
+        계열: '상관없음',
         미적: getMathLevel('미적'),
         확통: getMathLevel('확통'),
         기하: getMathLevel('기하'),
         제시문유형: getChecked('.type-cb'),
         답안유형: getChecked('.ans-cb'),
+        약술형만: getChecked('.type-cb').includes('약술형'),
     };
 }
 
@@ -232,11 +278,8 @@ function handleFilterChange() {
 
 // ===== 필터 초기화 =====
 function resetFilters() {
-    const defaultTrack = document.querySelector('input[name="track"][value="상관없음"]');
-    if (defaultTrack) defaultTrack.checked = true;
-
     ['미적', '확통', '기하'].forEach(key => {
-        const el = document.querySelector(`input[name="${key}"][value="불포함"]`);
+        const el = document.querySelector(`input[name="${key}"][value="무관"]`);
         if (el) el.checked = true;
     });
 
@@ -258,25 +301,7 @@ function resetFilters() {
 
 // ===== 매칭 판단 알고리즘 =====
 function rowMatchesFilter(row, f) {
-    if (f.계열 !== '상관없음') {
-        const track = row['모집계열 및 세부 학과'] || '';
-        let trackMatch = false;
-
-        if (f.계열 === '인문') {
-            trackMatch = track.includes('인문') || track.includes('사회') || track.includes('사범') || track.includes('경영') || track.includes('경제') || track.includes('상경') || track.includes('경상') || track.includes('교육');
-        } else if (f.계열 === '자연') {
-            trackMatch = track.includes('자연') || track.includes('의') || track.includes('약') || track.includes('공학') || track.includes('소프트웨어') || track.includes('컴퓨터');
-        } else if (f.계열 === '의약') {
-            trackMatch = track.includes('의예') || track.includes('치의예') || track.includes('의학') || track.includes('약학') || track.includes('약학부') || track.includes('한의예') || track.includes('수의예') || track.includes('의약');
-        } else if (f.계열 === '약술형') {
-            const presentType = row['제시문 유형'] || '';
-            trackMatch = presentType.includes('약술형') || presentType.includes('약술');
-        }
-
-        if (!trackMatch) return false;
-    }
-
-    const isMathFiltered = f.미적 !== '불포함' || f.확통 !== '불포함' || f.기하 !== '불포함';
+    const isMathFiltered = f.미적 !== '무관' || f.확통 !== '무관' || f.기하 !== '무관';
     const isHumanFiltered = f.제시문유형.length > 0 || f.답안유형.length > 0;
 
     if (!isMathFiltered && !isHumanFiltered) {
@@ -284,87 +309,79 @@ function rowMatchesFilter(row, f) {
     }
 
     const mathNorm = row['_수리정규화'] || '';
-    const ansNorm = row['_답안정규화'] || '';
-    const presentType = row['제시문 유형'] || '';
+    const rowPresent = row['_제시문'] || '';
+    const rowAnsType = row['_답안유형'] || '';
+    const rowTracks = determineTracks(row);
 
-    let mathPass = false;
+    const isNaturalOrMed = rowTracks.includes('자연') || rowTracks.includes('의약');
+    const isHumanTrack = rowTracks.includes('인문');
 
+    let mathPass = true;
+    let humanPass = true;
+
+    // ── 수리 필터: 자연/의약 계열 행에만 적용 ──
     if (isMathFiltered) {
-        if (mathNorm !== '해당없음' && mathNorm !== '') {
-            const getLevelVal = lvl => {
-                if (lvl === '포함') return 1;
-                return { '상': 3, '중상': 2, '중': 1 }[lvl] || 0;
-            };
-            const getCardLevel = subject => {
-                if (!mathNorm.includes(subject)) return 0;
-                if (subject === '미적') return 1;
-                const m = mathNorm.match(new RegExp(subject + '\\(([^)]+)\\)'));
-                return getLevelVal(m ? m[1] : '중');
-            };
-
-            let excluded = false;
-            for (const s of ['미적', '확통', '기하']) {
-                if (f[s] === '불포함' && getCardLevel(s) > 0) {
-                    excluded = true;
-                    break;
-                }
-            }
-
-            if (!excluded) {
-                let satisfied = false;
-                for (const s of ['미적', '확통', '기하']) {
-                    if (f[s] !== '불포함') {
-                        const cl = getCardLevel(s);
-                        if (cl > 0 && cl <= getLevelVal(f[s])) {
-                            satisfied = true;
-                            break;
-                        }
-                    }
-                }
-                mathPass = satisfied;
-            }
-        } else {
-            // 수리시험이 없는 대학(인문 등)은 수리 필터를 통과시킴
+        if (!isNaturalOrMed) {
+            // 인문 전용 행에는 수리 필터 적용 안 함 → 통과
             mathPass = true;
+        } else {
+            const hasMath = (mathNorm !== '해당없음' && mathNorm !== '');
+            const needsAnyMath = f.미적 === '포함' || f.확통 === '포함' || f.기하 === '포함';
+
+            if (needsAnyMath && !hasMath) {
+                mathPass = false;
+            } else if (hasMath) {
+                for (const s of ['미적', '확통', '기하']) {
+                    const hasSubject = mathNorm.includes(s);
+                    if (f[s] === '포함' && !hasSubject) { mathPass = false; break; }
+                    if (f[s] === '불포함' && hasSubject) { mathPass = false; break; }
+                }
+            } else {
+                // 수리 없는 자연계 행 + 필터 적용 중 → 탈락
+                mathPass = false;
+            }
         }
-    } else {
-        mathPass = true;
     }
 
-    let humanPass = false;
-
+    // ── 언어 필터: 인문 계열 행에만 적용 ──
     if (isHumanFiltered) {
-        const presentMatch = f.제시문유형.length === 0 || f.제시문유형.some(t => {
-            if (t === '약술형') return presentType.includes('약술형') || presentType.includes('약술');
-            if (t === '통계') return presentType.includes('통계');
-            if (t === '도표') return presentType.includes('도표');
-            if (t === '수학') return presentType.includes('수학') || presentType.includes('수리');
-            if (t === '영어') return presentType.includes('영어');
-            return false;
-        });
-
-        const ansMatch = f.답안유형.length === 0 || f.답안유형.some(t => {
-            const target = t === '장문' ? '장문형'
-                : t === '분할' ? '분할형'
-                : t === '쪼개기' ? '쪼개기형'
-                : t === '자유' ? '자유형'
-                : t;
-            return ansNorm.includes(target);
-        });
-
-        if (ansNorm !== '해당없음' && ansNorm !== '') {
-            humanPass = presentMatch && ansMatch;
-        } else if (presentType.includes('약술형') || presentType.includes('약술')) {
-            humanPass = presentMatch && ansMatch;
-        } else if (presentMatch && f.답안유형.length === 0) {
+        if (!isHumanTrack) {
+            // 자연/의약 전용 행에는 언어 필터 적용 안 함 → 통과
             humanPass = true;
+        } else {
+            // 약술형 단독 필터
+            const wantsYakSul = f.제시문유형.includes('약술형');
+            if (wantsYakSul) {
+                humanPass = rowAnsType === '약술형';
+            } else {
+                // 제시문 유형 매칭
+                const presentMatch = f.제시문유형.length === 0 || f.제시문유형.some(t => {
+                    if (t === '통계') return rowPresent.includes('통계');
+                    if (t === '도표') return rowPresent.includes('도표');
+                    if (t === '수리') return rowPresent.includes('수리');
+                    if (t === '영어') return rowPresent.includes('영어');
+                    return false;
+                });
+
+                // 답안 유형 매칭
+                const ansMatch = f.답안유형.length === 0 || f.답안유형.some(t => {
+                    return rowAnsType.includes(t);
+                });
+
+                if (rowAnsType === '약술형') {
+                    // 약술형 행이지만 약술형 필터 미선택 → 답안유형 필터가 없으면 통과
+                    humanPass = f.답안유형.length === 0 ? presentMatch : false;
+                } else if (rowAnsType || rowPresent) {
+                    humanPass = presentMatch && ansMatch;
+                } else {
+                    // 정보 없는 행은 제시문/답안 필터가 없으면 통과
+                    humanPass = (f.제시문유형.length === 0 && f.답안유형.length === 0);
+                }
+            }
         }
     }
 
-    if (isMathFiltered && isHumanFiltered) return mathPass && humanPass;
-    if (isMathFiltered) return mathPass;
-    if (isHumanFiltered) return humanPass;
-    return true;
+    return mathPass && humanPass;
 }
 
 // ===== 대학 검색 및 후보 목록 렌더링 =====
@@ -600,6 +617,14 @@ function renderGrid() {
 
     if (!container) return;
 
+    // 담은 대학 개수 배지 업데이트
+    const countBadge = document.getElementById('timetable-count-badge');
+    if (countBadge) {
+        const cnt = active.univs.length;
+        countBadge.textContent = cnt > 0 ? `${cnt}개 담김` : '';
+        countBadge.style.display = cnt > 0 ? 'inline-block' : 'none';
+    }
+
     if (active.univs.length === 0) {
         container.innerHTML = `<p style="text-align:center; padding:3rem 0; color:var(--text-muted);">대학을 검색하거나 추천받아 담아주세요.</p>`;
         return;
@@ -655,7 +680,7 @@ function renderGrid() {
 
     matchingRows.forEach(row => {
         const date = row['고사 일자'];
-        const slot = parseTimeSlot(row['고사 시간 (입실 포함)']);
+        const slot = parseTimeSlot(row['고사 시간']);
         const key = `${date}__${slot}`;
 
         if (!cellMap[key]) cellMap[key] = [];
@@ -723,22 +748,30 @@ function renderGrid() {
                     const isOverlap = isOn && cards.filter(isCardOn).length > 1;
 
                     const mathNorm = row['_수리정규화'] || '해당없음';
-                    const ansNorm = row['_답안정규화'] || '해당없음';
+                    const mathRaw = row['수리논술 범위 및 난이도'] || '';
+                    const rowPresent = row['_제시문'] || '';
+                    const rowAnsType = row['_답안유형'] || '';
+                    const rowAnsLength = row['_답안분량'] || '';
+                    const langRaw = row['_언어논술원문'] || '';
                     const hasMath = mathNorm !== '해당없음' && mathNorm !== '';
-                    const hasHuman = ansNorm !== '해당없음' && ansNorm !== '';
+                    const hasLang = rowAnsType !== '' || rowPresent !== '';
 
                     const typeBadge = hasMath
                         ? `<span style="display:inline-block; font-size:0.65rem; background-color:#818cf8; color:white; padding:1px 4px; border-radius:3px; margin-right:3px;">수리</span>`
-                        : hasHuman
+                        : hasLang
                             ? `<span style="display:inline-block; font-size:0.65rem; background-color:#f43f5e; color:white; padding:1px 4px; border-radius:3px; margin-right:3px;">인문</span>`
                             : '';
 
-                    const minStr = row['수능 최저학력기준 및 반영 방법'] || '';
+                    const minStr = row['수능 최저학력기준'] || '';
                     const hasMin = minStr && minStr !== '없음';
 
                     const minBadge = hasMin
                         ? `<span style="display:inline-block; font-size:0.65rem; background-color:#f59e0b; color:white; padding:1px 4px; border-radius:3px;">최저</span>`
                         : '';
+
+                    const langDisplay = rowAnsType
+                        ? `${rowAnsType}${rowAnsLength ? ' (' + rowAnsLength + ')' : ''}${rowPresent ? ' · ' + rowPresent : ''}`
+                        : rowPresent;
 
                     html += `
                         <div class="timetable-card ${isOn ? '' : 'off'} ${isOverlap ? 'overlap' : ''}" 
@@ -749,10 +782,10 @@ function renderGrid() {
                                 <span class="card-toggle">${isOn ? 'ON' : 'OFF'}</span>
                             </div>
                             <div class="card-track">${row['모집계열 및 세부 학과'] || ''}</div>
-                            <div class="card-time">🕐 ${row['고사 시간 (입실 포함)'] || '시간 미정'}</div>
+                            <div class="card-time">🕐 ${row['고사 시간'] || '시간 미정'}</div>
                             <div style="margin-top:0.25rem;">${typeBadge}${minBadge}</div>
-                            ${hasMath ? `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">📐 ${mathNorm}</div>` : ''}
-                            ${hasHuman ? `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">📝 ${ansNorm}</div>` : ''}
+                            ${hasMath ? `<div class="card-print-detail" style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">📐 <strong>수리:</strong> ${mathRaw || mathNorm}</div>` : ''}
+                            ${langDisplay ? `<div class="card-print-detail" style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">📝 <strong>언어:</strong> ${langDisplay}</div>` : ''}
                         </div>
                     `;
                 });
@@ -845,43 +878,92 @@ function renderSummary() {
         return m ? parseInt(m[1]) : 999;
     };
 
+    // 정렬 로직 적용
+    const sortCol = state.summarySort.column;
+    const isAsc = state.summarySort.asc;
+
     activeRows.sort((a, b) => {
-        const dateA = a['고사 일자'] || '';
-        const dateB = b['고사 일자'] || '';
+        let valA = a[sortCol] || '';
+        let valB = b[sortCol] || '';
 
-        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        // 고사 시간 정렬 특수 처리
+        if (sortCol === '고사 시간') {
+            const timeA = parseTimeForSort(valA);
+            const timeB = parseTimeForSort(valB);
+            return isAsc ? timeA - timeB : timeB - timeA;
+        }
 
-        return parseTimeForSort(a['고사 시간 (입실 포함)']) - parseTimeForSort(b['고사 시간 (입실 포함)']);
+        // 일반 문자열 정렬
+        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
     });
 
-    body.innerHTML = activeRows.map(row => {
-        const typeParts = [];
+    const rows = activeRows;
+    const getSortIndicator = col => {
+        if (state.summarySort.column !== col) return ' ↕';
+        return state.summarySort.asc ? ' ▲' : ' ▼';
+    };
 
-        if (row['제시문 유형'] && row['제시문 유형'] !== '없음' && row['제시문 유형'] !== '정보 없음') {
-            typeParts.push(`제시문: ${row['제시문 유형']}`);
-        }
-
-        if (row['인문논술 답안 유형/분량'] && row['인문논술 답안 유형/분량'] !== '없음' && row['인문논술 답안 유형/분량'] !== '해당 없음') {
-            typeParts.push(`답안: ${row['인문논술 답안 유형/분량']}`);
-        }
-
-        const humanStr = typeParts.length > 0 ? typeParts.join(', ') : '정보 없음';
-
-        return `
-            <div class="summary-card">
-                <div class="summary-univ">${row['대학명']} <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(${row['모집계열 및 세부 학과']})</span></div>
-                <div style="margin-top:0.4rem; display:flex; flex-direction:column; gap:0.2rem;">
-                    <div>📅 <strong>일정:</strong> ${row['고사 일자'] || '날짜 미정'} ${row['고사 시간 (입실 포함)'] || '시간 미정'}</div>
-                    <div>📐 <strong>수리논술:</strong> ${row['수리논술 범위/난이도'] || '해당 없음'}</div>
-                    <div>📝 <strong>인문논술:</strong> ${humanStr}</div>
-                    <div>🎯 <strong>수능최저:</strong> ${row['수능 최저학력기준 및 반영 방법'] || '없음'}</div>
-                </div>
-            </div>
-        `;
-    }).join('');
+    body.innerHTML = `
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px; text-align:center;">No.</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('대학명')">대학명${getSortIndicator('대학명')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('모집계열 및 세부 학과')">계열 / 학과${getSortIndicator('모집계열 및 세부 학과')}</th>
+                    <th style="cursor:pointer; text-align:center;" onclick="sortSummaryTable('고사 일자')">고사 일자${getSortIndicator('고사 일자')}</th>
+                    <th style="cursor:pointer; text-align:center;" onclick="sortSummaryTable('고사 시간')">고사 시간${getSortIndicator('고사 시간')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('수리논술 범위 및 난이도')">수리논술 범위${getSortIndicator('수리논술 범위 및 난이도')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('_답안유형')">언어논술 답안${getSortIndicator('_답안유형')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('_제시문')">제시문${getSortIndicator('_제시문')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('수능 최저학력기준')">수능최저${getSortIndicator('수능 최저학력기준')}</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.map((row, idx) => {
+                    const mathRaw = row['수리논술 범위 및 난이도'] || '';
+                    const mathNorm = row['_수리정규화'] || '';
+                    const ansType = row['_답안유형'] || '';
+                    const ansLen = row['_답안분량'] || '';
+                    const presentRaw = row['_제시문'] || '';
+                    const minRaw = row['수능 최저학력기준'] || '없음';
+                    const hasMin = minRaw && minRaw !== '없음';
+                    const hasMath = mathNorm && !['해당없음','없음','해당 없음',''].includes(mathNorm);
+                    const hasLang = ansType || presentRaw;
+                    const langDisplay = ansType
+                        ? `${ansType}${ansLen ? ' (' + ansLen + ')' : ''}${presentRaw ? ' · ' + presentRaw : ''}`
+                        : presentRaw;
+                    return `
+                        <tr>
+                            <td style="text-align:center; color:var(--text-muted); font-size:0.8rem;">${idx + 1}</td>
+                            <td><strong>${row['대학명']}</strong></td>
+                            <td style="font-size:0.78rem; color:var(--text-muted);">${row['모집계열 및 세부 학과'] || '-'}</td>
+                            <td style="text-align:center; font-weight:600;">${row['고사 일자'] || '미정'}</td>
+                            <td style="text-align:center; font-size:0.8rem;">${row['고사 시간'] || '미정'}</td>
+                            <td style="font-size:0.78rem;">${hasMath ? `<span class="summary-badge badge-math">수리</span> ${mathRaw || mathNorm}` : '<span style="color:var(--text-muted)">-</span>'}</td>
+                            <td style="font-size:0.78rem;">${hasLang ? `<span style="color:#be3a63; font-weight:600;">${langDisplay}</span>` : '<span style="color:var(--text-muted)">-</span>'}</td>
+                            <td style="font-size:0.78rem;">${presentRaw ? presentRaw : '<span style="color:var(--text-muted)">-</span>'}</td>
+                            <td style="font-size:0.75rem;">${hasMin ? `<span class="summary-badge badge-min">${minRaw}</span>` : '<span style="color:var(--text-muted)">없음</span>'}</td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
 
     panel.style.display = 'block';
 }
+
+function sortSummaryTable(column) {
+    if (state.summarySort.column === column) {
+        state.summarySort.asc = !state.summarySort.asc;
+    } else {
+        state.summarySort.column = column;
+        state.summarySort.asc = true;
+    }
+    renderSummary();
+}
+
+window.sortSummaryTable = sortSummaryTable;
 
 // ===== 새 시간표 추가 및 탭 전환 =====
 function addNewTimetable() {
@@ -1240,8 +1322,29 @@ function renderInteractiveSchedule() {
         // Mode B: 가로형 - 날짜가 한열에 다 있도록 단일 테이블 구조로 배치 조정
         const headerCols = allDates.map(d => {
             if (d.includes('수능일')) {
-                return `<th style="background:#000; color:#ef4444; min-width:32px; max-width:38px; font-size:0.62rem; padding:0.2rem 0; font-weight:800; border:1px solid #1a1a24; text-align:center; vertical-align:middle; white-space:nowrap;">수능일<br>(11/19)</th>`;
+                return `<th style="background:#000; color:#ef4444; min-width:20px; max-width:24px; font-size:0.55rem; padding:0.1rem 0; font-weight:800; border:1px solid #1a1a24; text-align:center; vertical-align:middle; white-space:nowrap; line-height:1.05;">11<br><span style="font-size:0.6rem; font-weight:900; border-top:1px solid #ef4444; border-bottom:1px solid #ef4444; display:block; margin:1px 0; padding:0;">19</span>수능</th>`;
             }
+            
+            // "10.11.(일)" or "11.1.(일)" 등 형식 파싱
+            // 월, 일, 요일을 개별로 추출하여 디자인 적용
+            const m = d.match(/(\d+)\.(\d+)\.\(([가-힣]+)\)/);
+            if (m) {
+                const month = m[1];
+                const day = m[2];
+                const yoil = m[3];
+                let yoilColor = '#fff';
+                if (yoil === '토') yoilColor = '#2563eb';
+                if (yoil === '일') yoilColor = '#dc2626';
+                
+                return `
+                    <th class="sched-th-date" style="padding: 0; min-width: 48px; border: 1px solid rgba(255,255,255,0.12);">
+                        <div style="background: rgba(255,255,255,0.08); font-size: 0.65rem; font-weight: 800; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">${month}</div>
+                        <div style="font-size: 0.95rem; font-weight: 800; padding: 2px 0; color: #fff; line-height: 1;">${day}</div>
+                        <div style="font-size: 0.72rem; font-weight: bold; padding: 2px 0; color: ${yoilColor}; border-top: 1px dashed rgba(255,255,255,0.15);">${yoil}</div>
+                    </th>
+                `;
+            }
+            
             const cleanD = d.replace(/\.\([가-힣]+\)$/, m => `<br><span style="font-size:0.62rem; font-weight:normal;">${m}</span>`);
             return `<th class="sched-th-date" style="font-size: 0.65rem; min-width: 45px; padding: 0.25rem 0.1rem; line-height: 1.2;">${cleanD}</th>`;
         }).join('');
@@ -1251,7 +1354,7 @@ function renderInteractiveSchedule() {
             const meta = trackMeta[trackType];
             const cells = allDates.map(date => {
                 if (date.includes('수능일')) {
-                    return `<td class="sched-cell sched-cell-suneung" style="background:#0b0c10; padding:0; border: 1px solid #1a1a24; text-align:center; color:#ef4444; font-size:0.6rem; font-weight:800; vertical-align:middle;">수<br>능<br>일</td>`;
+                    return `<td class="sched-cell sched-cell-suneung" style="background:#0b0c10; padding:0; border: 1px solid #1a1a24; text-align:center; color:#ef4444; font-size:0.55rem; font-weight:800; vertical-align:middle; min-width:20px; max-width:24px; line-height:1.2;">수<br>능<br>일</td>`;
                 }
                 const rowsForCell = state.univData.filter(r => r['고사 일자'] === date && determineTracks(r).includes(trackType));
                 const seenSession = new Set();
@@ -1276,10 +1379,10 @@ function renderInteractiveSchedule() {
                     if (!isMatched) btnStyle += 'opacity:0.25;filter:grayscale(60%);';
 
                     buttons.push(
-                        `<button class="sched-btn-block${isAdded ? ' sched-btn-block--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${isAdded ? ' ✓' : ''}</button>`
+                        `<button class="sched-btn-block${isAdded ? ' sched-btn-block--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${isAdded ? '✓' : ''}</button>`
                     );
                 });
-                return `<td class="sched-cell" style="background:${meta.bg}; padding: 0.2rem;"><div style="display: flex; flex-direction: column; gap: 2px; justify-content: flex-start; align-items: stretch;">${buttons.join('')}</div></td>`;
+                return `<td class="sched-cell" style="background:${meta.bg}; padding: 0.1rem 0.05rem; text-align: center;"><div style="display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; align-items: flex-start; min-height: 28px;">${buttons.join('')}</div></td>`;
             }).join('');
 
             let verticalLabel = '';
@@ -1314,23 +1417,26 @@ function renderInteractiveSchedule() {
                 overflow-y: auto; 
                 border-radius: 0.5rem;
                 border: 1px solid var(--border-color);
+                width: 100%;
+                -webkit-overflow-scrolling: touch;
             }
             .sched-table {
                 width: 100%;
+                min-width: max-content;
                 border-collapse: collapse;
-                font-size: 0.72rem;
-                table-layout: auto;
+                font-size: 0.7rem;
+                table-layout: fixed;
             }
             .sched-table thead th {
-                padding: 0.25rem 0.15rem;
+                padding: 0.15rem 0.05rem;
                 color: #fff;
                 font-weight: 700;
                 text-align: center;
                 border: 1px solid rgba(255,255,255,0.15);
-                font-size: 0.68rem;
+                font-size: 0.65rem;
             }
             .sched-th-date {
-                padding: 0.25rem 0.15rem;
+                padding: 0.15rem 0.05rem;
                 background: #3a3a4a;
                 color: #fff;
                 font-weight: 700;
@@ -1340,27 +1446,27 @@ function renderInteractiveSchedule() {
             .sched-track-header {
                 color: #fff;
                 font-weight: 700;
-                padding: 0.25rem 0.15rem;
+                padding: 0.15rem 0.05rem;
                 border: 1px solid rgba(255,255,255,0.15);
                 white-space: nowrap;
                 text-align: center;
-                font-size: 0.7rem;
+                font-size: 0.65rem;
                 vertical-align: middle;
             }
             .sched-date {
                 font-weight: 700;
                 white-space: nowrap;
-                padding: 0.25rem 0.15rem;
+                padding: 0.15rem 0.05rem;
                 border: 1px solid var(--border-color);
                 background: var(--bg-card);
                 text-align: center;
                 color: var(--text-main);
-                font-size: 0.7rem;
+                font-size: 0.68rem;
                 vertical-align: middle;
             }
             .sched-cell {
                 border: 1px solid var(--border-color);
-                padding: 0.2rem 0.15rem;
+                padding: 0.1rem 0.05rem;
                 vertical-align: top;
             }
             /* Mode A (계열이 열일 때, 이전버전 가로 나열 알약형태 버튼) */
@@ -1385,24 +1491,24 @@ function renderInteractiveSchedule() {
 
             /* Mode B (날짜가 열일 때, 세로 콤팩트 채우기 버튼) */
             .sched-btn-block {
-                display: block;
-                width: 100%;
-                margin: 1px 0;
-                padding: 1.5px 3px;
-                border-radius: 4px;
+                display: inline-block;
+                margin: 1px;
+                padding: 1px 3px;
+                border-radius: 3px;
                 border: 1px solid;
-                font-size: 0.64rem;
-                font-weight: 600;
+                font-size: 0.72rem;
+                font-weight: 700;
+                letter-spacing: -0.05em;
                 cursor: pointer;
                 font-family: var(--font-family);
                 transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
                 box-shadow: 0 1px 1px rgba(0,0,0,0.05);
                 white-space: nowrap;
-                line-height: 1.2;
+                line-height: 1.15;
                 text-align: center;
             }
             .sched-btn-block:hover { opacity: 0.85; transform: translateY(-1px); }
-            .sched-btn-block--on { box-shadow: 0 2px 4px rgba(0,0,0,0.18); }
+            .sched-btn-block--on { box-shadow: 0 1.5px 3px rgba(0,0,0,0.15); font-weight: 800; }
         </style>
         ${tableHtml}
     `;
