@@ -76,10 +76,14 @@ function parseEssayColumn(raw) {
 
 function normalizeData(raw) {
     return raw.map((row, idx) => {
-        // 새 CSV 컬럼명: '언어논술 제시문 및 답안 유형', '수리논술 범위 및 난이도'
         const essayRaw = row['언어논술 제시문 및 답안 유형'] || '';
         const mathRaw = row['수리논술 범위 및 난이도'] || '';
         const parsed = parseEssayColumn(essayRaw);
+
+        // 반영 비율 0 -> - 치환 처리 (ex: 70:0:0 -> 70:-:-)
+        const origRatio = row['논술:교과:비'] || row['전형 비율 (논술:교과:비교과)'] || '-';
+        const formattedRatio = origRatio.split(':').map(v => v.trim() === '0' ? '-' : v.trim()).join(':');
+
         return {
             ...row,
             '_rowIdx': idx,
@@ -88,9 +92,11 @@ function normalizeData(raw) {
             '_답안유형': parsed.answerType,
             '_답안분량': parsed.answerLength,
             '_언어논술원문': essayRaw,
+            '논술:교과:비': formattedRatio // 가공된 전형비율 속성 표준화
         };
     });
 }
+
 
 function determineTracks(row) {
     const dept = row['모집계열 및 세부 학과'] || '';
@@ -620,10 +626,26 @@ function renderGrid() {
     // 담은 대학 개수 배지 업데이트
     const countBadge = document.getElementById('timetable-count-badge');
     if (countBadge) {
-        const cnt = active.univs.length;
-        countBadge.textContent = cnt > 0 ? `${cnt}개 담김` : '';
-        countBadge.style.display = cnt > 0 ? 'inline-block' : 'none';
+        const totalCount = active.univs.length;
+        let onCount = 0;
+        active.univs.forEach(uniqueKey => {
+            const match = uniqueKey.match(/^(.+)\s\(([^|)]+)\)(?:\|(\d+))?$/);
+            if (!match) return;
+            const rowIdxStr = match[3];
+            if (rowIdxStr !== undefined) {
+                const rowIdx = parseInt(rowIdxStr);
+                const isManualOff = active.manualOverrides[rowIdx] === false;
+                if (!isManualOff) {
+                    onCount++;
+                }
+            } else {
+                onCount++;
+            }
+        });
+        countBadge.textContent = totalCount > 0 ? `(${onCount}/${totalCount})개` : '';
+        countBadge.style.display = totalCount > 0 ? 'inline-block' : 'none';
     }
+
 
     if (active.univs.length === 0) {
         container.innerHTML = `<p style="text-align:center; padding:3rem 0; color:var(--text-muted);">대학을 검색하거나 추천받아 담아주세요.</p>`;
@@ -878,26 +900,105 @@ function renderSummary() {
         return m ? parseInt(m[1]) : 999;
     };
 
+    // 수능 최저학력기준 곤란도(난이도) 평가 모델
+    const evaluateMinimumDifficulty = minText => {
+        if (!minText || minText === '없음' || minText === '정보 없음' || minText.includes('미적용')) {
+            return 0;
+        }
+
+        // 여러 학과 기준이 혼합된 경우 슬래시(/) 기준으로 최대 난이도 추출
+        const parts = minText.split('/');
+        let maxScore = 0;
+
+        parts.forEach(part => {
+            let score = 0;
+            
+            // 1. 반영 영역 수 추출 (4합: 400, 3합: 300, 2합: 200, 1개/1합: 100)
+            let areaNum = 0;
+            const matchArea = part.match(/(\d)\s*합/);
+            if (matchArea) {
+                areaNum = parseInt(matchArea[1]);
+            } else if (part.includes('1개') || part.includes('1개 영역') || part.includes('합 5')) {
+                // "합 5 이내" (경북대 등)는 의예/약학 3합5 등을 의미하므로 3합 보정, 아닐 시 1합
+                if (part.includes('의예') || part.includes('치의예') || part.includes('수의예') || part.includes('약학')) {
+                    areaNum = 3;
+                } else {
+                    areaNum = 1;
+                }
+            }
+
+            score += areaNum * 100;
+
+            // 2. 합산 등급 기준 (합산 등급 숫자가 작을수록 고난도이므로 20에서 뺌)
+            let gradeNum = 0;
+            let matchGrade = part.match(/(?:합|합\s*)\s*(\d{1,2})/);
+            if (!matchGrade) {
+                matchGrade = part.match(/(\d)\s*등급/);
+            }
+            if (matchGrade) {
+                gradeNum = parseInt(matchGrade[1]);
+            }
+
+            if (gradeNum > 0 && areaNum > 0) {
+                score += (20 - gradeNum);
+            }
+
+            // 3. 미세 조정 가산점
+            // ① 탐구 과목 조건 (2과목 평균 기준 등 더 까다로우면 상위)
+            if (part.includes('2과목 평균') || part.includes('2평균') || part.includes('탐구 2평균') || part.includes('과탐(2')) {
+                score += 1.5;
+            }
+            // ② 필수 지정 조건 (수학 필수, 특정 과목 지정 등)
+            if (part.includes('필수') || part.includes('포함') || part.includes('지정')) {
+                score += 0.5;
+            }
+
+            if (score > maxScore) {
+                maxScore = score;
+            }
+        });
+
+        return maxScore;
+    };
+
     // 정렬 로직 적용
     const sortCol = state.summarySort.column;
     const isAsc = state.summarySort.asc;
 
-    activeRows.sort((a, b) => {
-        let valA = a[sortCol] || '';
-        let valB = b[sortCol] || '';
+    if (sortCol) {
+        activeRows.sort((a, b) => {
+            let valA = a[sortCol] || '';
+            let valB = b[sortCol] || '';
 
-        // 고사 시간 정렬 특수 처리
-        if (sortCol === '고사 시간') {
-            const timeA = parseTimeForSort(valA);
-            const timeB = parseTimeForSort(valB);
-            return isAsc ? timeA - timeB : timeB - timeA;
-        }
+            // 고사 시간 정렬 특수 처리
+            if (sortCol === '고사 시간') {
+                const timeA = parseTimeForSort(valA);
+                const timeB = parseTimeForSort(valB);
+                return isAsc ? timeA - timeB : timeB - timeA;
+            }
 
-        // 일반 문자열 정렬
-        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    });
+            // 수능 최저학력기준 곤란도(난이도) 정렬 특수 처리
+            if (sortCol === '수능 최저학력기준') {
+                const scoreA = evaluateMinimumDifficulty(valA);
+                const scoreB = evaluateMinimumDifficulty(valB);
+                // 기본 오름차순(▲) 클릭 시 난이도 높은 순 우선 정렬
+                return isAsc ? scoreB - scoreA : scoreA - scoreB;
+            }
+
+            // 일반 문자열 정렬
+            return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+    } else {
+        // 드래그/클릭에 의해 임의 정렬이 수행되는 경우 active.univs에 정의된 순서 보존
+        activeRows.sort((a, b) => {
+            const keyA = active.univs.find(k => k.includes('|' + a['_rowIdx'])) || '';
+            const keyB = active.univs.find(k => k.includes('|' + b['_rowIdx'])) || '';
+            return active.univs.indexOf(keyA) - active.univs.indexOf(keyB);
+        });
+    }
 
     const rows = activeRows;
+
     const getSortIndicator = col => {
         if (state.summarySort.column !== col) return ' ↕';
         return state.summarySort.asc ? ' ▲' : ' ▼';
@@ -912,10 +1013,10 @@ function renderSummary() {
                     <th style="cursor:pointer;" onclick="sortSummaryTable('모집계열 및 세부 학과')">계열 / 학과${getSortIndicator('모집계열 및 세부 학과')}</th>
                     <th style="cursor:pointer; text-align:center;" onclick="sortSummaryTable('고사 일자')">고사 일자${getSortIndicator('고사 일자')}</th>
                     <th style="cursor:pointer; text-align:center;" onclick="sortSummaryTable('고사 시간')">고사 시간${getSortIndicator('고사 시간')}</th>
-                    <th style="cursor:pointer;" onclick="sortSummaryTable('수리논술 범위 및 난이도')">수리논술 범위${getSortIndicator('수리논술 범위 및 난이도')}</th>
-                    <th style="cursor:pointer;" onclick="sortSummaryTable('_답안유형')">언어논술 답안${getSortIndicator('_답안유형')}</th>
-                    <th style="cursor:pointer;" onclick="sortSummaryTable('_제시문')">제시문${getSortIndicator('_제시문')}</th>
-                    <th style="cursor:pointer;" onclick="sortSummaryTable('수능 최저학력기준')">수능최저${getSortIndicator('수능 최저학력기준')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('수리논술 범위 및 난이도')">수리논술${getSortIndicator('수리논술 범위 및 난이도')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('_답안유형')">인문,상경${getSortIndicator('_답안유형')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('수능 최저학력기준')">수능최저(난도)${getSortIndicator('수능 최저학력기준')}</th>
+                    <th style="cursor:pointer; text-align:center;" onclick="sortSummaryTable('논술:교과:비')">논술:교과:비${getSortIndicator('논술:교과:비')}</th>
                 </tr>
             </thead>
             <tbody>
@@ -926,14 +1027,19 @@ function renderSummary() {
                     const ansLen = row['_답안분량'] || '';
                     const presentRaw = row['_제시문'] || '';
                     const minRaw = row['수능 최저학력기준'] || '없음';
+                    const ratioRaw = row['논술:교과:비'] || '-';
                     const hasMin = minRaw && minRaw !== '없음';
                     const hasMath = mathNorm && !['해당없음','없음','해당 없음',''].includes(mathNorm);
                     const hasLang = ansType || presentRaw;
                     const langDisplay = ansType
                         ? `${ansType}${ansLen ? ' (' + ansLen + ')' : ''}${presentRaw ? ' · ' + presentRaw : ''}`
                         : presentRaw;
+                    
+                    // 역방향으로 uniqueKey 찾기
+                    const uKey = active.univs.find(k => k.includes('|' + row['_rowIdx'])) || `${row['대학명']} (${row['모집계열 및 세부 학과']})|${row['_rowIdx']}`;
+
                     return `
-                        <tr>
+                        <tr draggable="true" data-key="${uKey}">
                             <td style="text-align:center; color:var(--text-muted); font-size:0.8rem;">${idx + 1}</td>
                             <td><strong>${row['대학명']}</strong></td>
                             <td style="font-size:0.78rem; color:var(--text-muted);">${row['모집계열 및 세부 학과'] || '-'}</td>
@@ -941,8 +1047,8 @@ function renderSummary() {
                             <td style="text-align:center; font-size:0.8rem;">${row['고사 시간'] || '미정'}</td>
                             <td style="font-size:0.78rem;">${hasMath ? `<span class="summary-badge badge-math">수리</span> ${mathRaw || mathNorm}` : '<span style="color:var(--text-muted)">-</span>'}</td>
                             <td style="font-size:0.78rem;">${hasLang ? `<span style="color:#be3a63; font-weight:600;">${langDisplay}</span>` : '<span style="color:var(--text-muted)">-</span>'}</td>
-                            <td style="font-size:0.78rem;">${presentRaw ? presentRaw : '<span style="color:var(--text-muted)">-</span>'}</td>
-                            <td style="font-size:0.75rem;">${hasMin ? `<span class="summary-badge badge-min">${minRaw}</span>` : '<span style="color:var(--text-muted)">없음</span>'}</td>
+                            <td style="font-size:0.72rem; white-space: pre-wrap; word-break: break-word; line-height:1.5;">${hasMin ? `<span class="summary-badge badge-min" style="white-space:normal;">${minRaw.replace(/,\s*/g, ',\n').replace(/\s*\/\s*/g, '\n/ ')}</span>` : '<span style="color:var(--text-muted)">없음</span>'}</td>
+                            <td style="font-size:0.78rem; color:var(--text-muted); text-align:center;">${ratioRaw}</td>
                         </tr>
                     `;
                 }).join('')}
@@ -951,6 +1057,7 @@ function renderSummary() {
     `;
 
     panel.style.display = 'block';
+    setupSummaryDragAndClick();
 }
 
 function sortSummaryTable(column) {
@@ -962,6 +1069,111 @@ function sortSummaryTable(column) {
     }
     renderSummary();
 }
+
+let selectedRowKeyForMove = null;
+
+function setupSummaryDragAndClick() {
+    const table = document.querySelector('.summary-table');
+    if (!table) return;
+
+    const rows = table.querySelectorAll('tbody tr');
+    let draggedKey = null;
+
+    rows.forEach(row => {
+        const key = row.getAttribute('data-key');
+        if (!key) return;
+
+        // 1. 드래그 앤 드롭
+        row.addEventListener('dragstart', (e) => {
+            draggedKey = key;
+            row.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', key);
+
+            // 기존 클릭 선택 해제
+            if (selectedRowKeyForMove) {
+                const prevSel = table.querySelector('.selected-row-for-move');
+                if (prevSel) prevSel.classList.remove('selected-row-for-move');
+                selectedRowKeyForMove = null;
+            }
+        });
+
+        row.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const draggingRow = table.querySelector('.dragging');
+            const targetRow = e.target.closest('tr');
+            if (targetRow && targetRow !== draggingRow) {
+                const rect = targetRow.getBoundingClientRect();
+                const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                const parent = targetRow.parentNode;
+                parent.insertBefore(draggingRow, next ? targetRow.nextSibling : targetRow);
+            }
+        });
+
+        row.addEventListener('drop', (e) => {
+            e.preventDefault();
+            row.classList.remove('dragging');
+
+            const currentRows = Array.from(table.querySelectorAll('tbody tr'));
+            const newUnivs = [];
+            currentRows.forEach(r => {
+                const k = r.getAttribute('data-key');
+                if (k) newUnivs.push(k);
+            });
+
+            const active = getActiveTimetable();
+            active.univs = newUnivs;
+            state.summarySort.column = null; // 정렬 초기화
+            saveStateToLocalStorage();
+            renderSummary();
+            renderGrid();
+        });
+
+        row.addEventListener('dragend', () => {
+            row.classList.remove('dragging');
+        });
+
+        // 2. 행 직접 클릭으로 순서 조정
+        row.addEventListener('click', (e) => {
+            // 헤더 클릭 등은 무시
+            if (e.target.tagName === 'TH' || e.target.closest('th') || e.target.tagName === 'BUTTON') return;
+
+            const active = getActiveTimetable();
+
+            if (!selectedRowKeyForMove) {
+                // 첫 클릭: 대상 선택
+                selectedRowKeyForMove = key;
+                row.classList.add('selected-row-for-move');
+            } else {
+                if (selectedRowKeyForMove === key) {
+                    // 동일 행 클릭: 선택 해제
+                    row.classList.remove('selected-row-for-move');
+                    selectedRowKeyForMove = null;
+                } else {
+                    // 두 번째 클릭: 이동 실행
+                    const fromIdx = active.univs.indexOf(selectedRowKeyForMove);
+                    const toIdx = active.univs.indexOf(key);
+
+                    if (fromIdx !== -1 && toIdx !== -1) {
+                        const targetKey = active.univs[fromIdx];
+                        active.univs.splice(fromIdx, 1);
+                        const insertIdx = active.univs.indexOf(key);
+                        // 대상 행의 바로 앞으로 이동
+                        active.univs.splice(insertIdx, 0, targetKey);
+
+                        state.summarySort.column = null; // 정렬 해제
+                        saveStateToLocalStorage();
+                    }
+
+                    selectedRowKeyForMove = null;
+                    renderSummary();
+                    renderGrid();
+                }
+            }
+        });
+    });
+}
+
 
 window.sortSummaryTable = sortSummaryTable;
 
@@ -1038,9 +1250,16 @@ function toggleScheduleImage() {
 
 // ===== D-day & 비밀번호 PDF & 포춘쿠키 추가 기능 =====
 function updateDDay() {
-    const targetDate = new Date('2026-11-19T08:00:00');
     const now = new Date();
-    const diff = targetDate - now;
+    
+    // 수능일 및 오늘 자정 기준 날짜 객체 생성 (순수 일수 계산용)
+    const targetMidnight = new Date(2026, 10, 19); // 2026.11.19 (0-indexed 10은 11월)
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayDiff = Math.round((targetMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+    
+    // 시:분:초 카운트용
+    const targetDateTime = new Date('2026-11-19T09:00:00'); // 수능 당일 9시 시험 시작 가정
+    const diff = targetDateTime - now;
     
     const dDayRightEl = document.getElementById('dday-header-right');
     const dDayNumbersEl = document.getElementById('dday-numbers');
@@ -1050,21 +1269,221 @@ function updateDDay() {
         dDayRightEl.textContent = '2026.11.19. / D-Day 경과';
         dDayNumbersEl.textContent = '00:00:00:00';
     } else {
-        const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+        // 카운터용 일수: diff(ms) 기반으로 계산 → dayDiff와 자동으로 ±1일 내 동기화
+        const counterDays = Math.floor(diff / (1000 * 60 * 60 * 24));
         const diffHours = Math.floor((diff / (1000 * 60 * 60)) % 24);
         const diffMinutes = Math.floor((diff / (1000 * 60)) % 60);
         const diffSeconds = Math.floor((diff / 1000) % 60);
         
-        dDayRightEl.textContent = `2026.11.19. / D-${diffDays}`;
+        // 우측 D-XXX는 오늘 자정 기준 날짜 수 표시
+        dDayRightEl.textContent = `2026.11.19. / D-${dayDiff}`;
         
+        // 카운터 숫자는 실제 남은 시간 기반 (D-day와 최대 1일 차이)
         const pad = (num) => String(num).padStart(2, '0');
-        dDayNumbersEl.textContent = `${diffDays}:${pad(diffHours)}:${pad(diffMinutes)}:${pad(diffSeconds)}`;
+        dDayNumbersEl.textContent = `${counterDays}:${pad(diffHours)}:${pad(diffMinutes)}:${pad(diffSeconds)}`;
     }
 }
 
 function openSecretPdf() {
     window.open('300.pdf', '_blank');
 }
+
+function captureTimetable() {
+    const area = document.getElementById('capture-area');
+    const container = document.getElementById('capture-flex-container');
+    const leftPanel = document.getElementById('capture-left-panel');
+    const rightPanel = document.getElementById('capture-right-panel');
+
+    if (!area || !container || !leftPanel || !rightPanel) return;
+
+    // [0] OFF 카드 임시 숨기기 (캡처 시 ON된 것들만 보이게)
+    const offCards = area.querySelectorAll('.timetable-card.off');
+    offCards.forEach(card => { card.setAttribute('data-hidden-for-capture', 'true'); card.style.display = 'none'; });
+
+    // [1] timetable-bg-wrapper: 세로로 긴 시간표 전체가 보이도록 overflow 해제
+    const timetableWrapper = area.querySelector('.timetable-bg-wrapper');
+    const origTimetableOverflow = timetableWrapper ? timetableWrapper.style.overflowX : null;
+    const origTimetableMaxH = timetableWrapper ? timetableWrapper.style.maxHeight : null;
+    if (timetableWrapper) {
+        timetableWrapper.style.overflow = 'visible';
+        timetableWrapper.style.maxHeight = 'none';
+    }
+
+    // [2] summary-body: 요약표가 rightPanel 너비(650px) 안에 맞게 → width 100%로 고정
+    const summaryBody = area.querySelector('#summary-body');
+    const origSummaryOverflow = summaryBody ? summaryBody.style.overflowX : null;
+    const origSummaryWidth = summaryBody ? summaryBody.style.width : null;
+    if (summaryBody) {
+        summaryBody.style.overflowX = 'visible';
+        summaryBody.style.width = '100%';
+    }
+
+    // [3] 요약 테이블: table-layout:fixed + font-size 축소로 650px 안에 자동 줄바꿈
+    const summaryTable = area.querySelector('.summary-table');
+    const origSummaryTableStyle = summaryTable ? {
+        fontSize: summaryTable.style.fontSize,
+        tableLayout: summaryTable.style.tableLayout,
+        width: summaryTable.style.width
+    } : null;
+    if (summaryTable) {
+        summaryTable.style.fontSize = '0.65rem';
+        summaryTable.style.tableLayout = 'fixed';
+        summaryTable.style.width = '100%';
+    }
+
+    // [4] 캡처용 좌우 배치 (2칼럼) 임시 스타일 적용
+    const originalContainerFlexDir = container.style.flexDirection;
+    const originalContainerAlign = container.style.alignItems;
+    const originalLeftWidth = leftPanel.style.width;
+    const originalRightWidth = rightPanel.style.width;
+    const originalAreaOverflow = area.style.overflow;
+    const originalAreaWidth = area.style.width;
+
+    container.style.flexDirection = 'row';
+    container.style.alignItems = 'flex-start';
+    leftPanel.style.width = '750px';
+    rightPanel.style.width = '650px';
+    rightPanel.style.overflow = 'visible';
+    area.style.overflow = 'visible';
+    area.style.width = '1440px';
+
+    // 캡처 완료 시 원래 상태로 복원
+    const restoreStyles = () => {
+        // OFF 카드 복원
+        offCards.forEach(card => { card.removeAttribute('data-hidden-for-capture'); card.style.display = ''; });
+        if (timetableWrapper) {
+            timetableWrapper.style.overflowX = origTimetableOverflow || '';
+            timetableWrapper.style.overflow = '';
+            timetableWrapper.style.maxHeight = origTimetableMaxH || '';
+        }
+        if (summaryBody) {
+            summaryBody.style.overflowX = origSummaryOverflow || '';
+            summaryBody.style.width = origSummaryWidth || '';
+        }
+        if (summaryTable && origSummaryTableStyle) {
+            summaryTable.style.fontSize = origSummaryTableStyle.fontSize;
+            summaryTable.style.tableLayout = origSummaryTableStyle.tableLayout;
+            summaryTable.style.width = origSummaryTableStyle.width;
+        }
+        container.style.flexDirection = originalContainerFlexDir;
+        container.style.alignItems = originalContainerAlign;
+        leftPanel.style.width = originalLeftWidth;
+        rightPanel.style.width = originalRightWidth;
+        rightPanel.style.overflow = '';
+        area.style.overflow = originalAreaOverflow;
+        area.style.width = originalAreaWidth;
+    };
+
+    // html2canvas 실행
+    html2canvas(area, {
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+        scale: 2,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        windowWidth: 1500,
+        windowHeight: area.scrollHeight + 100
+    }).then(canvas => {
+        restoreStyles();
+        const link = document.createElement('a');
+        link.download = '나의_논술_모의계획표.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }).catch(err => {
+        console.error('이미지 캡처 오류:', err);
+        restoreStyles();
+        alert('이미지 저장 중 오류가 발생했습니다. 브라우저 호환성을 확인해 주세요.');
+    });
+}
+
+// 새 창 방식 인쇄 함수 (window.print()의 빈 페이지 문제 우회)
+function printTimetable() {
+    const area = document.getElementById('capture-area');
+    if (!area) return;
+
+    // 현재 화면 스타일시트 경로 수집
+    const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .map(l => `<link rel="stylesheet" href="${l.href}">`)
+        .join('\n');
+    const inlineStyles = Array.from(document.querySelectorAll('style'))
+        .map(s => `<style>${s.textContent}</style>`)
+        .join('\n');
+
+    // ON 상태 카드만 포함하여 HTML 추출 (OFF 카드 제거)
+    const areaClone = area.cloneNode(true);
+    areaClone.querySelectorAll('.timetable-card.off').forEach(el => el.remove());
+    areaClone.querySelectorAll('.timetable-tabs, .timetable-header button, .no-print').forEach(el => el.remove());
+
+    // 캡처 flex를 인쇄용 column으로 전환 (시간표 밑에 요약표 배치)
+    const flexContainer = areaClone.querySelector('#capture-flex-container');
+    if (flexContainer) {
+        flexContainer.style.flexDirection = 'column';
+        flexContainer.style.alignItems = 'stretch';
+        flexContainer.style.gap = '2rem';
+    }
+    const leftPanel = areaClone.querySelector('#capture-left-panel');
+    if (leftPanel) {
+        leftPanel.style.width = '100%';
+        leftPanel.style.flex = 'none';
+    }
+    const rightPanel = areaClone.querySelector('#capture-right-panel');
+    if (rightPanel) {
+        rightPanel.style.width = '100%';
+        rightPanel.style.flex = 'none';
+    }
+
+    const printHTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>나의 논술 모의 계획표</title>
+${styleLinks}
+${inlineStyles}
+<style>
+  body { background: white !important; margin: 0; padding: 0.4cm; font-family: 'Noto Sans KR', sans-serif; box-sizing: border-box; }
+  #print-area { width: 100%; }
+  #capture-flex-container { display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 1.5rem !important; width: 100% !important; }
+  #capture-left-panel { width: 100% !important; }
+  #capture-right-panel { width: 100% !important; }
+  
+  /* 시간표 테이블 크기 유연화 (상하 배치이므로 조금 더 시원하게 0.72rem 적용) */
+  .tt-table { width: 100% !important; table-layout: fixed !important; font-size: 0.72rem !important; }
+  .tt-table th, .tt-table td { padding: 0.35rem 0.3rem !important; word-break: break-all !important; }
+  .timetable-bg-wrapper { overflow: visible !important; max-height: none !important; width: 100% !important; }
+  
+  /* 시간표 카드 최적화 */
+  .timetable-card { padding: 0.35rem !important; margin-bottom: 3px !important; box-shadow: none !important; border: 1px solid #ddd !important; }
+  .timetable-card .card-title { font-size: 0.75rem !important; font-weight: 700 !important; }
+  .timetable-card .card-print-detail { display: block !important; font-size: 0.65rem !important; color: #444 !important; }
+  
+  /* 요약 테이블 크기 유연화 */
+  #summary-body { overflow: visible !important; width: 100% !important; }
+  #summary-panel { display: block !important; margin-top: 0 !important; }
+  .summary-table { width: 100% !important; table-layout: fixed !important; font-size: 0.7rem !important; word-break: break-word !important; }
+  .summary-table th, .summary-table td { padding: 0.35rem 0.4rem !important; white-space: normal !important; word-break: break-word !important; }
+  .summary-badge { display: inline-block; white-space: normal !important; padding: 0.15rem 0.3rem !important; font-size: 0.62rem !important; }
+  
+  .timetable-card.off { display: none !important; }
+  @page { size: A4 landscape; margin: 0.8cm; }
+</style>
+</head>
+<body>
+<div id="print-area">${areaClone.outerHTML}</div>
+<script>
+  window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 400); };
+<\/script>
+</body>
+</html>`;
+
+    const printWin = window.open('', '_blank', 'width=1200,height=800');
+    if (!printWin) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.'); return; }
+    printWin.document.open();
+    printWin.document.write(printHTML);
+    printWin.document.close();
+}
+
+
 
 const fortunes = [
     "지금 흐르는 땀방울이 미래의 당신을 더욱 빛나게 할 것입니다.",
@@ -1076,7 +1495,283 @@ const fortunes = [
     "매일 조금씩 성장하는 당신의 노력이 이미 결실을 맺기 시작했습니다.",
     "오늘 최선을 다한 당신, 합격의 주인공은 바로 당신입니다.",
     "흔들리지 않고 피는 꽃은 없습니다. 오늘의 고민이 당신을 더 단단하게 만듭니다.",
-    "당신의 꿈을 응원합니다. 할 수 있습니다!"
+    "당신의 꿈을 응원합니다. 할 수 있습니다!",
+    "불안함은 진지함의 증거입니다. 당신은 이미 충분히 열심히 하고 있어요.",
+    "오늘 모르는 문제가 내일의 실력이 됩니다. 틀린 것도 자산입니다.",
+    "수능은 당신의 전부가 아닙니다. 하지만 지금 최선을 다하는 당신이 자랑스럽습니다.",
+    "잠깐 쉬어도 괜찮아요. 충전된 에너지로 더 멀리 달릴 수 있습니다.",
+    "조금 느려도 괜찮습니다. 당신의 속도가 곧 당신의 길입니다.",
+    "오늘 하루도 버텨낸 당신, 그것만으로도 충분히 대단합니다.",
+    "남과 비교하지 마세요. 어제의 나보다 오늘의 내가 더 성장했다면 그것으로 됩니다.",
+    "긴장은 준비된 사람만이 느끼는 감정입니다. 당신이 얼마나 열심히 했는지 알고 있어요.",
+    "합격의 기쁨은 반드시 당신 곁으로 찾아올 것입니다. 조금만 더 버텨요.",
+    "포기하고 싶은 날에도 한 문제만 더. 그 한 문제가 당신의 미래를 바꿉니다.",
+    "당신이 걸어온 길이 틀리지 않았음을, 결과가 증명할 것입니다.",
+    "실수해도 괜찮아요. 다시 일어나는 힘이 진짜 실력입니다.",
+    "오늘 힘들다면, 그만큼 목표에 가까워지고 있다는 신호입니다.",
+    "집중하는 지금 이 순간이 가장 빛나는 당신입니다.",
+    "수험생 여러분, 오늘도 한 걸음씩. 분명히 해낼 수 있어요.",
+    "포기하지 마세요, 노력은 배신하지 않습니다.",
+    "오늘 하루도 잘 버텨낸 자신을 칭찬해주세요.",
+    "당신의 잠재력은 상상 이상으로 무궁무진합니다.",
+    "어려운 모의고사 점수에 일희일비하지 마세요. 실전이 진짜입니다.",
+    "지치고 힘들 때는 깊게 숨을 한번 쉬고 다시 시작해 봐요.",
+    "원하는 대학에 당당히 합격할 당신의 미래를 응원합니다.",
+    "할 수 있다고 믿는 순간, 이미 절반은 이뤄낸 것입니다.",
+    "당신의 쏟은 모든 정성이 빛을 발할 날이 곧 올 것입니다.",
+    "충분히 잘하고 있고, 앞으로도 계속 잘 해낼 것입니다.",
+    "성공을 향한 가장 확실한 길은 한 번만 더 시도하는 것입니다.",
+    "작은 성취가 모여 큰 승리를 만듭니다. 오늘 공부한 한 페이지도 소중합니다.",
+    "체력과 멘탈은 공부의 기본입니다. 오늘 밤은 푹 자길 바랄게요.",
+    "슬럼프는 더 높이 도약하기 위해 웅크리는 과정일 뿐입니다.",
+    "스스로를 믿는 것보다 더 강한 합격 무기는 없습니다.",
+    "자신감은 승리로 이끄는 최고의 지름길입니다.",
+    "오늘도 목표를 위해 한 걸음 내딛은 당신이 참 멋집니다.",
+    "끝까지 최선을 다한 시간은 인생의 가장 큰 자산이 될 것입니다.",
+    "눈앞의 어둠은 곧 밝아올 새벽이 멀지 않았음을 의미합니다.",
+    "당신이 꿈꾸는 미래는 이미 가까이에 와 있습니다.",
+    "오늘 틀린 문제는 수능 시험장에서 맞출 최고의 기회입니다.",
+    "매 순간 최선을 다하면 후회는 남지 않습니다. 자신을 믿으세요.",
+    "스스로를 아끼고 격려하는 하루가 되기를 소망합니다.",
+    "합격은 간절히 바라고 끝까지 실행하는 자의 몫입니다.",
+    "힘내세요! 지금 이 순간도 당신은 꿈에 다가가고 있습니다.",
+    "마지막에 웃는 자가 진정한 승리자입니다. 끝까지 페이스를 잃지 마세요.",
+    "포기는 선택지에 없습니다. 전진만이 있을 뿐입니다.",
+    "당신만의 페이스를 유지하며 묵묵히 걸어가면 성공합니다.",
+    "당신의 노력을 세상이 알아줄 날이 눈앞에 다가왔습니다.",
+    "어려운 고비를 넘길 때마다 합격 가능성은 더 높아집니다.",
+    "오늘도 흔들림 없이 책상 앞을 지킨 당신이 자랑스럽습니다.",
+    "성공의 비결은 단 하나, 끝까지 포기하지 않는 끈기입니다.",
+    "당신은 이 세상을 바꿀 만큼 놀라운 인재입니다.",
+    "힘든 날이 있다면 맛있는 음식을 먹고 기운을 내보세요.",
+    "오늘의 수고가 내일의 환한 웃음으로 돌아올 것을 믿습니다.",
+    "목표가 뚜렷하면 흔들리지 않습니다. 초심을 잃지 마세요.",
+    "할 수 있다는 마음가짐 하나로 모든 장벽을 무너뜨릴 수 있습니다.",
+    "인생에서 가장 찬란하게 빛날 날을 위해 오늘을 견뎌봅시다.",
+    "긍정적인 생각은 긍정적인 결과를 부르는 법입니다.",
+    "당신이 노력한 모든 순간은 우주가 기억하고 보답할 것입니다.",
+    "남들의 기준에 휘둘리지 말고 오롯이 자신에게 집중하세요.",
+    "수능 합격의 기쁨을 만끽할 당신의 모습을 상상해 보세요.",
+    "충분한 휴식도 공부의 중요한 일부분입니다. 쉬어 가세요.",
+    "오늘 머릿속에 담은 지식들이 시험장에서 빛을 발할 것입니다.",
+    "당신의 성실함이 최고의 기적을 만들어 낼 것입니다.",
+    "오늘 힘든 공부가 미래의 자유를 선물할 것입니다.",
+    "주변의 시선보다는 스스로의 성장에 집중하는 하루를 보내세요.",
+    "할 수 있다는 굳은 믿음으로 한 번 더 책장을 넘겨보세요.",
+    "끝은 또 다른 시작이자 승리의 순간입니다.",
+    "꿈은 포기하지 않는 한 반드시 실현되는 법입니다.",
+    "매일 1%씩만 나아진다면, 결국 완전함에 도달하게 됩니다.",
+    "성공은 준비와 기회가 만나는 곳에 존재합니다. 당신은 준비 중입니다.",
+    "낙담하지 마세요. 오늘의 아쉬움은 내일의 원동력이 됩니다.",
+    "빛은 가장 어두운 밤을 지나온 뒤에야 찾아오는 법입니다.",
+    "합격의 골인 지점이 저 멀리 보이기 시작합니다. 힘을 내세요.",
+    "당신이 들인 모든 수고에 박수를 보냅니다.",
+    "노력의 무게만큼 결실의 단맛은 배가 될 것입니다.",
+    "마음의 평안을 얻는 순간, 최고의 집중력이 발휘됩니다.",
+    "오늘 해야 할 일들을 묵묵히 마친 당신에게 박수를 보냅니다.",
+    "꿈은 도망가지 않습니다. 도망가는 것은 언제나 자신일 뿐입니다.",
+    "실전에서는 연습처럼, 연습은 실전처럼 신중하게 임하세요.",
+    "작은 습관이 모여서 합격이라는 큰 산을 만듭니다.",
+    "조급해하지 마세요. 시간은 충분히 당신 편입니다.",
+    "자신을 향한 의심을 멈추는 순간 성공이 시작됩니다.",
+    "오늘 공부한 지식은 평생 당신의 머릿속에 남을 큰 힘이 됩니다.",
+    "끝까지 견디는 힘이 가장 위대한 재능입니다.",
+    "원하는 것을 향해 거침없이 나아가세요.",
+    "당신이 가는 그 길의 끝에는 합격이라는 꽃길이 있을 것입니다.",
+    "어제를 후회하기보다 오늘을 설계하는 편이 훨씬 현명합니다.",
+    "마지막 스퍼트가 승부를 결정짓습니다. 조금만 더 힘냅니다.",
+    "용기를 내세요. 당신의 도전을 모두가 뜨겁게 응원하고 있습니다.",
+    "오늘도 열심히 살아낸 당신을 진심으로 안아주고 싶습니다.",
+    "당신의 빛나는 성취를 위해 매일 기도하는 이들이 있습니다.",
+    "포기하지 않는 열정은 모든 한계를 뛰어넘습니다.",
+    "조용히 쌓은 내공이 시험장에서 폭발적인 에너지가 될 것입니다.",
+    "아침에 일어난 작은 결심이 합격의 지름길을 만듭니다.",
+    "흔들리더라도 부러지지 않는 유연함을 지니시길 바랍니다.",
+    "공부의 고통은 잠깐이지만 합격의 기쁨은 영원합니다.",
+    "최종 합격이라는 아름다운 목적지에 곧 도착할 예정입니다.",
+    "오늘 흘린 땀방울이 합격의 꽃길에 물을 주는 셈입니다.",
+    "목표 대학의 캠퍼스를 걷는 당신을 기분 좋게 상상해 보세요.",
+    "부정적인 생각은 훌훌 털어버리고 다시 펜을 잡으세요.",
+    "시간은 정직하게 흘러 당신의 성장을 고스란히 보여줄 것입니다.",
+    "오늘 공부한 내용은 무조건 시험에 출제될 것입니다.",
+    "실수조차도 성장의 밑거름이 됨을 잊지 마세요.",
+    "마음먹은 대로 흘러가지 않아도 포기하지 않는 지혜가 필요합니다.",
+    "자신에 대한 흔들림 없는 확신을 바탕으로 하루를 채우세요.",
+    "합격 통지서를 받아들고 기뻐할 부모님의 얼굴을 떠올려보세요.",
+    "스스로에게 칭찬을 아끼지 마세요. 당신은 대단합니다.",
+    "고비마다 한 걸음씩만 더 나아가면 목표에 도달합니다.",
+    "포기하지 않는 마음이 가장 큰 기적을 불러옵니다.",
+    "오늘의 고단함이 내일의 자랑스러움으로 바뀔 것입니다.",
+    "실력은 계단식으로 상승합니다. 정체기 뒤에 도약이 있습니다.",
+    "지혜롭고 슬기롭게 오늘 하루를 이겨낸 당신이 자랑스럽습니다.",
+    "마음을 다스리는 자가 시험에서도 백전백승하는 법입니다.",
+    "최선을 다하고 결과를 기다리는 겸허한 마음을 가집시다.",
+    "수능 대박의 주인공은 이미 정해져 있습니다. 바로 당신입니다.",
+    "스스로를 신뢰하는 마음이 합격의 주춧돌이 됩니다.",
+    "어려운 문제를 극복해낼 때마다 당신의 수준은 한층 높아집니다.",
+    "불안을 이겨내는 가장 좋은 방법은 지금 당장 몰입하는 것입니다.",
+    "매일 똑같은 일상처럼 보여도 당신은 조금씩 나아가고 있습니다.",
+    "오늘보다 더 나은 내일이 올 것이라는 믿음을 잃지 마세요.",
+    "꿈은 간절한 사람에게 가장 먼저 문을 열어줍니다.",
+    "체력을 아끼고 페이스를 지키는 것도 똑똑한 전략입니다.",
+    "시험 문제는 당신이 아는 곳에서 전부 나올 것입니다.",
+    "어려운 시기가 지나면 인생의 황금기가 찾아올 것입니다.",
+    "당신의 머릿속은 합격에 필요한 지식으로 가득 차고 있습니다.",
+    "목표를 마음 깊이 새기고 묵묵히 전진하세요.",
+    "오늘 하루 수고 많으셨습니다. 편안한 휴식을 취하세요.",
+    "더 멀리 뛰기 위해 잠시 웅크리는 지혜를 가져봅시다.",
+    "자신을 가장 많이 믿어주는 사람이 바로 자기 자신이어야 합니다.",
+    "끝없는 성실함이 합격이라는 달콤한 과실을 맺게 합니다.",
+    "오늘 조금 덜 공부했어도 자책하지 마세요. 내일 더 잘하면 됩니다.",
+    "자랑스러운 미래의 자신을 상상하며 오늘을 극복해봅시다.",
+    "합격을 향한 발걸음에 온 우주의 기운이 깃들기를 바랍니다.",
+    "흔들리지 않는 굳건한 의지가 있으면 두려울 것이 없습니다.",
+    "모든 과목의 오답이 시험장에서 정답으로 탈바꿈할 것입니다.",
+    "오늘 하루도 지혜롭고 차분하게 계획을 달성했군요.",
+    "당신의 가치는 모의고사 점수 몇 점으로 평가받지 못합니다.",
+    "당당하고 씩씩하게 수험 생활의 마침표를 찍어봅시다.",
+    "힘내세요, 승리는 멀지 않은 곳에 기다리고 있습니다.",
+    "하루하루가 합격을 향한 소중한 퍼즐 조각입니다.",
+    "자신을 한계 짓지 마세요. 당신은 무엇이든 될 수 있습니다.",
+    "시험장에서 당신의 펜 끝이 정답만을 콕콕 집어낼 것입니다.",
+    "끝까지 견디고 노력한 모든 이에게 합격의 문은 열립니다.",
+    "포기하는 것은 언제나 가장 나쁜 전략입니다. 계속 가세요.",
+    "스스로가 자랑스러운 공부를 하도록 최선을 다하세요.",
+    "오늘 뿌린 노력의 씨앗이 내일의 기적을 창조할 것입니다.",
+    "조급해하지 않고 느긋하게 집중하는 태도가 필요합니다.",
+    "당신은 시험의 주인공이며 합격의 산증인이 될 것입니다.",
+    "최선의 노력을 다했다면 당당하게 어깨를 펴도 좋습니다.",
+    "몸과 마음이 건강해야 지치지 않고 완주할 수 있습니다.",
+    "내일의 태양은 오늘보다 훨씬 더 밝게 당신을 비출 것입니다.",
+    "지금의 노력이 인생의 든든한 밑거름이 되어줄 것입니다.",
+    "최종 목표를 향해 한 계단씩 차근차근 밟고 올라서세요.",
+    "수능 날까지 남은 시간은 오롯이 당신이 성장할 시간입니다.",
+    "스스로를 향한 뜨거운 격려가 최고의 동기부여입니다.",
+    "어렵게 느껴지는 것도 계속 반복하면 익숙해지는 법입니다.",
+    "당신이 할 수 있다고 확신하면 정말로 해내게 됩니다.",
+    "합격은 남들이 만들어주는 것이 아닌, 당신이 쟁취하는 것입니다.",
+    "오늘의 모든 스트레스는 수능 날 모두 사라질 것입니다.",
+    "마지막까지 집중력을 유지하는 집중의 힘을 믿으세요.",
+    "매 순간 최선을 다한 기억이 평생의 자부심이 됩니다.",
+    "하루를 돌아보며 작은 감사함을 느껴보는 것도 좋습니다.",
+    "오늘 공부한 양이 적더라도 깊이가 있었다면 성공입니다.",
+    "인내의 쓴맛은 잠깐이지만 열매의 단맛은 영원합니다.",
+    "목표 대학에 당당히 서 있는 자신을 믿고 나아가세요.",
+    "지치고 피곤할 때는 따뜻한 차 한 잔으로 몸을 녹이세요.",
+    "세상은 노력하는 자에게 결국 최고의 기회를 줍니다.",
+    "어떤 역경 속에서도 합격을 이뤄낼 단단한 내공을 쌓으세요.",
+    "오늘도 후회 없는 하루를 보내느라 정말 수고하셨습니다.",
+    "자신감이 절반, 성실함이 나머지 절반을 채워줍니다.",
+    "흔들리는 멘탈을 꼭 쥐어잡고 오답 하나에 더 집중하세요.",
+    "시험 문제는 당신이 그동안 공부한 범위 안에서만 출제됩니다.",
+    "실수하는 법을 배워야 비로소 실수를 줄일 수 있습니다.",
+    "포기라는 단어를 머릿속에서 완전히 지워버리세요.",
+    "끝까지 버티는 뚝심이 결국 대세의 흐름을 바꿉니다.",
+    "합격을 부르는 가장 좋은 습관은 매일 약점을 극복하는 것입니다.",
+    "스스로를 다독이며 한 걸음씩만 더 걸어가 봅시다.",
+    "오늘보다 한층 더 진보할 내일을 적극적으로 환영하세요.",
+    "목표에 대한 열망이 클수록 합격의 문은 넓어집니다.",
+    "마음의 소란을 잠재우고 눈앞의 책장에 시선을 맞추세요.",
+    "체계적으로 관리된 하루가 수능 대박의 기본입니다.",
+    "실전 시험지처럼 꼼꼼하게 지금 푸는 문제를 대하세요.",
+    "오늘 하루 열심히 달린 당신을 위해 깊은 잠을 보냅니다.",
+    "성공을 확신하며 걷는 걸음걸이에는 당당함이 묻어납니다.",
+    "당신은 도전을 즐기고 이겨낼 능력이 충분한 사람입니다.",
+    "끝까지 온 정성을 쏟으면 결과는 자연스럽게 따라옵니다.",
+    "실수 하나에 낙담할 시간에 오답의 이유를 분석하세요.",
+    "모든 수험 기간은 당신의 인격을 성숙시키는 소중한 기회입니다.",
+    "마음에 여유를 품을 때 두뇌 회전도 가장 빨라집니다.",
+    "수능 날 가벼운 발걸음으로 시험장을 나올 당신을 믿습니다.",
+    "오늘 공부한 이론이 머릿속에 완벽히 정립되기를 바랍니다.",
+    "어떠한 난관이 찾아와도 극복할 지혜가 우리 안에 있습니다.",
+    "합격은 끊임없이 의문을 던지고 해결하는 자의 열매입니다.",
+    "오늘 하루 무탈하게 공부를 끝낸 스스로에게 박수치세요.",
+    "긍정의 에너지를 가득 채워 기분 좋게 잠자리에 드세요.",
+    "꿈꾸는 삶에 다가가기 위한 오늘의 희생은 가치 있습니다.",
+    "최선을 다하되 스스로에게 너무 냉정해지지는 마세요.",
+    "시험 점수가 오르지 않는 정체기도 성장의 소중한 일부입니다.",
+    "어려운 개념을 마스터했을 때의 쾌감을 느껴보세요.",
+    "당신의 매일은 합격이라는 기적을 빚어내는 순간들입니다.",
+    "주변 사람들의 응원에 힘입어 끝까지 에너지를 채우세요.",
+    "아침 공부부터 밤 공부까지 성실히 소화해 낸 당신입니다.",
+    "스스로를 진심으로 신뢰하는 사람만이 성공을 쟁취합니다.",
+    "오늘 발견한 약점을 기분 좋게 보강하고 넘어가세요.",
+    "자신감 있게 문제를 풀어가는 거침없는 태도를 기르세요.",
+    "수능 날 최고의 컨디션으로 실력을 뽐내게 될 것입니다.",
+    "포기라는 나약함에 굴복하지 않는 강인한 자신을 만드세요.",
+    "노력의 꽃은 늦게 피더라도 가장 화려하게 피어납니다.",
+    "마음속의 의심을 지우고 긍정적인 기대만을 남기세요.",
+    "어려운 조건에서도 공부를 이어가는 당신은 영웅입니다.",
+    "오늘도 최선을 다했으니 후회 없이 하루를 마무리하세요.",
+    "수능 날 가방 가득 합격의 꿈을 싣고 돌아올 것입니다.",
+    "당신의 눈부신 비상을 모두가 설레는 마음으로 기다립니다.",
+    "최종 합격자 명단에서 당신의 이름을 발견하게 될 것입니다.",
+    "한결같은 끈기와 노력은 모든 불안을 잠재우는 명약입니다.",
+    "오늘 공부한 지식들이 시험장에서 보물처럼 쏟아질 것입니다.",
+    "매일매일 꿈을 향해 진군하는 자랑스러운 청춘입니다.",
+    "지치고 쓰러질 것 같을 때 당신을 사랑하는 이들을 생각하세요.",
+    "마지막 한 달, 한 주, 하루가 모든 것을 결정짓습니다.",
+    "자신감을 장착하고 세상의 시험대에 당당히 올라서세요.",
+    "오늘 뿌린 노력의 씨앗이 내일의 기적을 창조할 것입니다.",
+    "스스로에게 격려와 응원의 말을 끊임없이 건네주세요.",
+    "성실하게 쌓아 올린 시간은 그 무엇도 무너뜨릴 수 없습니다.",
+    "합격의 결실을 맺을 소중한 인내의 시간들을 사랑해 보세요.",
+    "오늘도 당신은 어제보다 훨씬 더 지혜롭고 똑똑해졌습니다.",
+    "어려운 한 문제에 쏟은 고민의 시간이 실력을 도약시킵니다.",
+    "수능 성공의 짜릿함을 상상하며 기분 좋게 펜을 드세요.",
+    "흔들리지 않고 끝까지 목적지를 향해 직진하는 마음입니다.",
+    "오늘 하루도 무사히 완주해 낸 당신에게 박수를 보냅니다.",
+    "자신을 향한 굳은 신념은 어떠한 바람에도 꺾이지 않습니다.",
+    "모든 오답은 더 완벽한 정답으로 나아가는 과정입니다.",
+    "조급함과 두려움을 떨쳐내고 내면의 평온을 찾으세요.",
+    "당신은 이미 훌륭하며, 더 훌륭해지는 중입니다.",
+    "끝까지 페이스를 유지하는 자가 수능의 최종 승자입니다.",
+    "합격이라는 행복한 결과를 온몸으로 맞이할 날이 옵니다.",
+    "오늘 공부를 마친 맑은 정신으로 내일을 기대해 봅시다.",
+    "노력하는 과정 자체가 당신의 아름다운 스펙이 될 것입니다.",
+    "어려운 과목일수록 기본으로 돌아가 기초를 다지세요.",
+    "스스로를 위로하며 나아가는 지혜로운 수험생이 됩시다.",
+    "당신의 열정이 합격이라는 놀라운 기적을 만들어냅니다.",
+    "오늘 틀린 문제는 완벽한 내 지식으로 저장하면 됩니다.",
+    "두려움을 지우고 합격의 가능성만을 향해 집중해 보세요.",
+    "끝까지 견디는 삶은 그 자체로 찬란하게 빛납니다.",
+    "오늘 하루 목표했던 공부를 성공적으로 해내셨군요.",
+    "당신의 머릿속은 수능 날 최고의 능력을 발휘할 것입니다.",
+    "지칠 때는 맛있는 간식을 먹으며 잠시 뇌를 쉬어주세요.",
+    "마지막 수능 날 웃으며 문을 나설 자신을 믿어보세요.",
+    "오늘 공부한 핵심 포인트를 다시 한번 리마인드 하세요.",
+    "성실한 노력이 결국 모든 불안함을 잠재워 줄 것입니다.",
+    "당신이 포기하지 않는 한 성공은 반드시 찾아옵니다.",
+    "오늘 밤은 걱정 없이 편안하게 단잠을 자길 소망합니다.",
+    "꿈은 그것을 믿고 실행하는 사람에게 반드시 응답합니다.",
+    "힘들고 포기하고 싶은 순간이 진짜 합격의 고비입니다.",
+    "스스로를 향해 따뜻한 미소를 지어보이는 밤이 되세요.",
+    "매 순간 최선을 다했다면 결과는 하늘에 맡기면 됩니다.",
+    "오늘도 수고한 자신에게 마음속 깊은 감사를 건네세요.",
+    "합격의 에너지가 당신의 주위에 맴돌고 있습니다.",
+    "어제보다 오늘 더 똑똑해진 자신을 축하해주세요.",
+    "어려운 수학 문제도 끈질기게 붙잡으면 결국 풀립니다.",
+    "지혜롭고 성실한 태도가 평생을 관통하는 실력이 됩니다.",
+    "오늘 공부한 소중한 지식들을 고스란히 마음속에 담으세요.",
+    "끝까지 집중력을 잃지 않는 단단한 마음을 지니세요.",
+    "원하는 미래에 당당히 도착해 있을 당신을 확신합니다.",
+    "오늘 흘린 눈물이 내일의 찬란한 합격 영광이 됩니다.",
+    "자신을 격려하며 끝까지 용기를 잃지 않기를 바랍니다.",
+    "당신의 쏟아부은 열정의 크기만큼 기적이 일어날 것입니다.",
+    "흔들리지 않고 꿋꿋하게 공부를 지켜나가는 모습이 귀합니다.",
+    "오늘 하루도 치열하게 성장을 일궈낸 당신이 최고입니다.",
+    "스스로를 신뢰하고 거침없이 앞으로 나아가시길 바랍니다.",
+    "모든 정성이 더해져 수능 시험장에서 만점의 행운이 깃듭니다.",
+    "조급해하지 마세요. 당신의 속도는 지극히 정상입니다.",
+    "최선을 다하는 당신의 하루하루가 이미 눈부신 작품입니다.",
+    "몸의 피로를 풀고 마음을 맑게 비우는 수면을 청하세요.",
+    "내일의 학습 계획을 기대하며 편안하게 오늘을 마무리하세요.",
+    "당신의 아름다운 미래를 위한 오늘 하루의 헌신에 감사합니다.",
+    "수능 날 떨지 않고 차분히 실력을 발휘할 지혜를 드립니다.",
+    "당신은 합격의 영광을 누릴 충분한 자격이 있는 사람입니다.",
+    "마지막 순간까지 긴장의 끈을 늦추지 않고 정진해 나갑시다.",
+    "꿈꾸는 캠퍼스의 낭만을 만끽할 당신을 늘 응원합니다.",
+    "수능 대박, 최종 합격의 기적은 오롯이 당신의 것입니다!"
 ];
 
 function openFortuneModal() {
@@ -1249,8 +1944,10 @@ function renderInteractiveSchedule() {
     if (!state.scheduleTranspose) {
         // Mode A: 세로형 (행 = 날짜, 열 = 계열)
         let rowsHtml = '';
+        let lastMonthA = '';
         allDates.forEach(date => {
             if (date.includes('수능일')) {
+                lastMonthA = '';
                 rowsHtml += `<tr style="border-bottom: 2px solid #000;">
                     <td class="sched-date" style="background:#000; color:#fff; font-size:0.75rem; font-weight:800; padding: 0.35rem 0.25rem;">11.19.(목)</td>
                     <td colspan="3" style="background:#111; color:#ef4444; font-weight:800; text-align:center; font-size:0.75rem; padding:0.35rem; border: 1px solid #000; letter-spacing: 0.1em;">⚡ 2027학년도 대학수학능력시험 (수능일)</td>
@@ -1260,6 +1957,21 @@ function renderInteractiveSchedule() {
 
             const rowsForDate = state.univData.filter(r => r['고사 일자'] === date);
             if (rowsForDate.length === 0) return;
+
+            // 동일한 월은 생략하여 간소하게 표현
+            let displayDate = date;
+            const m = date.match(/(\d+)\.(\d+)\.\(([가-힣]+)\)/);
+            if (m) {
+                const month = m[1];
+                const day = m[2];
+                const yoil = m[3];
+                if (month === lastMonthA) {
+                    displayDate = `${day}.(${yoil})`;
+                } else {
+                    lastMonthA = month;
+                    displayDate = `${month}.${day}.(${yoil})`;
+                }
+            }
 
             const cells = allTracks.map((trackType, colIdx) => {
                 const meta = trackMeta[trackType];
@@ -1276,7 +1988,6 @@ function renderInteractiveSchedule() {
                     const shortName = shortenUnivName(uName);
                     const displayLabel = shortName;
                     
-                    // 해당 대학, 계열, 날짜에 해당하는 모든 전형들
                     const matches = trackRows.filter(tr => tr['대학명'] === uName);
                     const isAdded = matches.some(tr => active.univs.includes(`${uName} (${trackType})|${tr._rowIdx}`));
                     const isMatched = matches.some(tr => rowMatchesFilter(tr, f));
@@ -1300,7 +2011,7 @@ function renderInteractiveSchedule() {
             }).join('');
 
             rowsHtml += `<tr>
-                <td class="sched-date">${date}</td>
+                <td class="sched-date">${displayDate}</td>
                 ${cells}
             </tr>`;
         });
@@ -1320,13 +2031,13 @@ function renderInteractiveSchedule() {
         `;
     } else {
         // Mode B: 가로형 - 날짜가 한열에 다 있도록 단일 테이블 구조로 배치 조정
+        let lastMonthB = '';
         const headerCols = allDates.map(d => {
             if (d.includes('수능일')) {
+                lastMonthB = '';
                 return `<th style="background:#000; color:#ef4444; min-width:20px; max-width:24px; font-size:0.55rem; padding:0.1rem 0; font-weight:800; border:1px solid #1a1a24; text-align:center; vertical-align:middle; white-space:nowrap; line-height:1.05;">11<br><span style="font-size:0.6rem; font-weight:900; border-top:1px solid #ef4444; border-bottom:1px solid #ef4444; display:block; margin:1px 0; padding:0;">19</span>수능</th>`;
             }
             
-            // "10.11.(일)" or "11.1.(일)" 등 형식 파싱
-            // 월, 일, 요일을 개별로 추출하여 디자인 적용
             const m = d.match(/(\d+)\.(\d+)\.\(([가-힣]+)\)/);
             if (m) {
                 const month = m[1];
@@ -1336,9 +2047,12 @@ function renderInteractiveSchedule() {
                 if (yoil === '토') yoilColor = '#2563eb';
                 if (yoil === '일') yoilColor = '#dc2626';
                 
+                const isSameMonth = (month === lastMonthB);
+                lastMonthB = month;
+
                 return `
                     <th class="sched-th-date" style="padding: 0; min-width: 48px; border: 1px solid rgba(255,255,255,0.12);">
-                        <div style="background: rgba(255,255,255,0.08); font-size: 0.65rem; font-weight: 800; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">${month}</div>
+                        <div style="background: rgba(255,255,255,0.08); font-size: 0.65rem; font-weight: 800; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">${isSameMonth ? '&nbsp;' : month + '월'}</div>
                         <div style="font-size: 0.95rem; font-weight: 800; padding: 2px 0; color: #fff; line-height: 1;">${day}</div>
                         <div style="font-size: 0.72rem; font-weight: bold; padding: 2px 0; color: ${yoilColor}; border-top: 1px dashed rgba(255,255,255,0.15);">${yoil}</div>
                     </th>
