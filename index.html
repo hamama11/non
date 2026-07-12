@@ -338,11 +338,12 @@
                 ⚠️ 제공되는 일정은 모의 계획용 가안입니다. 원서 접수 전 반드시 <strong>최종 모집 요강</strong>을 확인하세요.
             </div>
 
-            <!-- 예시 이미지 추가 -->
+            <!-- 예시 이미지 추가 (클릭 시 크게 보기) -->
             <div style="text-align: center; margin-bottom: 0.8rem;">
-                <p style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin: 0 0 4px 0;">🗺️ 모의 계획표 및 요약본 캡처 예시</p>
-                <img src="ex.png" alt="시간표 예시" style="max-width: 100%; max-height: 140px; object-fit: contain; border-radius: 0.375rem; border: 1px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                <p style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin: 0 0 4px 0;">🗺️ 모의 계획표 및 요약본 캡처 예시 <span style="font-size:0.65rem; font-weight:500; color:#4f46e5;">(클릭 시 크게 보기)</span></p>
+                <img src="ex.png" alt="시간표 예시" onclick="window.open('ex.png', '_blank')" style="max-width: 100%; max-height: 140px; object-fit: contain; border-radius: 0.375rem; border: 1px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.15s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
             </div>
+
 
             <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
                 <button class="btn-primary" onclick="closeWelcomeModal()"
