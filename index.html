@@ -165,11 +165,20 @@
                             </div>
                             
                             <!-- 약술형 전형 필터 -->
-                            <div style="background: rgba(107, 63, 160, 0.03); border: 1px solid rgba(107, 63, 160, 0.15); border-radius: 0.35rem; padding: 0.35rem;">
+                            <div style="background: rgba(107, 63, 160, 0.03); border: 1px solid rgba(107, 63, 160, 0.15); border-radius: 0.35rem; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
                                 <label class="cb-label" style="margin:0; width: 100%;">
                                     <input type="checkbox" class="type-cb" value="약술형" onchange="handleFilterChange()">
                                     <span style="font-weight: 800; color: #6b3fa0; border-color: rgba(107, 63, 160, 0.2);">약술형 전형만 보기</span>
                                 </label>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <button onclick="openShortPdf()" class="btn-primary" 
+                                        style="font-size: 0.75rem; padding: 0.35rem 0.5rem; background-color: #6b3fa0; border-color: #6b3fa0; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; border-radius: 0.25rem; width: 100%; cursor: pointer; color: white; font-weight: 700;">
+                                        📄 약술형 모아보기 (PDF)
+                                    </button>
+                                    <div style="font-size: 0.58rem; color: var(--text-muted); text-align: center; margin-top: 2px;">
+                                        출처: 팀DreamOn 경기 배0형tr.
+                                    </div>
+                                </div>
                             </div>
 
                         </div>
@@ -190,7 +199,7 @@
                         <span style="color: #000000;">🏫 서울 소재(검정)</span>
                         <span style="color: #16a34a;">🌳 서울외 지역(초록)</span>
                     </div>
-                    <div>※ 이름 클릭 → 해당 계열 전체 시간표 추가. 필터 미해당 대학은 연하게 표시.</div>
+                    <div>※ 대학명 클릭 → 해당 계열 전체 추가.  (출처: 서울특별시교육청교육연구정보원)</div>
                 </div>
             </div>
 
@@ -353,6 +362,89 @@
         </div>
     </div>
     <!-- Fortune Cookie Modal -->
+    <style>
+        .cookie-container {
+            position: relative;
+            width: 280px;
+            height: 140px;
+            margin: 1.5rem auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .cookie-part {
+            font-size: 5.5rem;
+            position: absolute;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.6s;
+            cursor: pointer;
+            user-select: none;
+            line-height: 1;
+            z-index: 10;
+        }
+        .cookie-part.left {
+            clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+            transform-origin: center right;
+        }
+        .cookie-part.right {
+            clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);
+            transform-origin: center left;
+        }
+
+        @keyframes cookie-shake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-3px, 1px) rotate(-3deg); }
+            20% { transform: translate(2px, -1px) rotate(2deg); }
+            30% { transform: translate(-2px, -1px) rotate(-2deg); }
+            40% { transform: translate(1px, 2px) rotate(1deg); }
+            50% { transform: translate(-1px, -1px) rotate(-1deg); }
+            60% { transform: translate(2px, 1px) rotate(2deg); }
+            70% { transform: translate(-2px, 2px) rotate(-2deg); }
+            80% { transform: translate(1px, -2px) rotate(1deg); }
+            90% { transform: translate(-1px, 1px) rotate(-1deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        .cookie-container.shaking .cookie-part {
+            animation: cookie-shake 0.4s ease-in-out infinite;
+        }
+
+        .cookie-container.opened .cookie-part.left {
+            transform: translateX(-65px) rotate(-25deg) scale(0.8);
+            opacity: 0.5;
+        }
+        .cookie-container.opened .cookie-part.right {
+            transform: translateX(65px) rotate(25deg) scale(0.8);
+            opacity: 0.5;
+        }
+
+        .fortune-paper {
+            position: absolute;
+            width: 290px;
+            background: #fff;
+            border: 1px dashed #F4C8D2;
+            border-radius: 0.5rem;
+            padding: 0.8rem;
+            box-shadow: 0 8px 16px rgba(15, 90, 67, 0.08);
+            transform: scale(0.3);
+            opacity: 0;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s;
+            z-index: 5;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            box-sizing: border-box;
+            background-color: var(--bg-main, #fffcfd);
+        }
+
+        .cookie-container.opened .fortune-paper {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
     <div id="fortune-modal"
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.4); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px);">
         <div
@@ -360,12 +452,19 @@
             <h3
                 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                 🥠 오늘을 위한 응원</h3>
-            <p id="fortune-modal-text"
-                style="font-size: 1.05rem; line-height: 1.6; color: var(--primary); font-weight: 700; margin: 1.5rem 0; min-height: 3rem; display: flex; align-items: center; justify-content: center; padding: 0.5rem; background: var(--bg-main); border-radius: 0.5rem; transition: opacity 0.2s;">
-            </p>
+            
+            <div class="cookie-container" id="cookie-container">
+                <div class="cookie-part left">🥠</div>
+                <div class="cookie-part right">🥠</div>
+                <div class="fortune-paper" id="fortune-paper">
+                    <p id="fortune-text-ko" style="font-size: 0.92rem; line-height: 1.5; color: var(--primary); font-weight: 700; margin: 0; word-break: keep-all;"></p>
+                    <p id="fortune-text-en" style="font-size: 0.75rem; line-height: 1.4; color: #4b5563; font-style: italic; margin: 0; border-top: 1px dashed rgba(15, 90, 67, 0.15); padding-top: 0.4rem; word-break: keep-all;"></p>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem;">
-                <button class="btn-primary" onclick="crackCookieModal()"
-                    style="padding: 0.5rem 1.2rem; font-size: 0.85rem;">🥠 다른 쿠키 열기</button>
+                <button class="btn-primary" id="btn-cookie-action" onclick="crackCookieModal()"
+                    style="padding: 0.5rem 1.2rem; font-size: 0.85rem;">🥠 쿠키 열기</button>
                 <button class="btn-secondary" onclick="closeFortuneModal()"
                     style="padding: 0.5rem 1.2rem; font-size: 0.85rem;">닫기</button>
             </div>

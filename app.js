@@ -351,38 +351,36 @@ function rowMatchesFilter(row, f) {
 
     // ── 언어 필터: 인문 계열 행에만 적용 ──
     if (isHumanFiltered) {
-        if (!isHumanTrack) {
-            // 자연/의약 전용 행에는 언어 필터 적용 안 함 → 통과
+        const wantsYakSul = f.제시문유형.includes('약술형');
+        if (wantsYakSul) {
+            // 약술형 필터는 모든 계열 공통으로 적용
+            humanPass = rowAnsType === '약술형';
+        } else if (!isHumanTrack) {
+            // 자연/의약 전용 행에는 다른 언어 필터 적용 안 함 → 통과
             humanPass = true;
         } else {
-            // 약술형 단독 필터
-            const wantsYakSul = f.제시문유형.includes('약술형');
-            if (wantsYakSul) {
-                humanPass = rowAnsType === '약술형';
+            // 제시문 유형 매칭
+            const presentMatch = f.제시문유형.length === 0 || f.제시문유형.some(t => {
+                if (t === '통계') return rowPresent.includes('통계');
+                if (t === '도표') return rowPresent.includes('도표');
+                if (t === '수리') return rowPresent.includes('수리');
+                if (t === '영어') return rowPresent.includes('영어');
+                return false;
+            });
+
+            // 답안 유형 매칭
+            const ansMatch = f.답안유형.length === 0 || f.답안유형.some(t => {
+                return rowAnsType.includes(t);
+            });
+
+            if (rowAnsType === '약술형') {
+                // 약술형 행이지만 약술형 필터 미선택 → 답안유형 필터가 없으면 통과
+                humanPass = f.답안유형.length === 0 ? presentMatch : false;
+            } else if (rowAnsType || rowPresent) {
+                humanPass = presentMatch && ansMatch;
             } else {
-                // 제시문 유형 매칭
-                const presentMatch = f.제시문유형.length === 0 || f.제시문유형.some(t => {
-                    if (t === '통계') return rowPresent.includes('통계');
-                    if (t === '도표') return rowPresent.includes('도표');
-                    if (t === '수리') return rowPresent.includes('수리');
-                    if (t === '영어') return rowPresent.includes('영어');
-                    return false;
-                });
-
-                // 답안 유형 매칭
-                const ansMatch = f.답안유형.length === 0 || f.답안유형.some(t => {
-                    return rowAnsType.includes(t);
-                });
-
-                if (rowAnsType === '약술형') {
-                    // 약술형 행이지만 약술형 필터 미선택 → 답안유형 필터가 없으면 통과
-                    humanPass = f.답안유형.length === 0 ? presentMatch : false;
-                } else if (rowAnsType || rowPresent) {
-                    humanPass = presentMatch && ansMatch;
-                } else {
-                    // 정보 없는 행은 제시문/답안 필터가 없으면 통과
-                    humanPass = (f.제시문유형.length === 0 && f.답안유형.length === 0);
-                }
+                // 정보 없는 행은 제시문/답안 필터가 없으면 통과
+                humanPass = (f.제시문유형.length === 0 && f.답안유형.length === 0);
             }
         }
     }
@@ -1227,6 +1225,7 @@ window.toggleCardOnOff = toggleCardOnOff;
 window.addNewTimetable = addNewTimetable;
 window.switchTab = switchTab;
 window.openSecretPdf = openSecretPdf;
+window.openShortPdf = openShortPdf;
 window.openFortuneModal = openFortuneModal;
 window.closeFortuneModal = closeFortuneModal;
 window.crackCookieModal = crackCookieModal;
@@ -1287,6 +1286,10 @@ function updateDDay() {
 
 function openSecretPdf() {
     window.open('300.pdf', '_blank');
+}
+
+function openShortPdf() {
+    window.open('short.pdf', '_blank');
 }
 
 function captureTimetable() {
@@ -1779,7 +1782,15 @@ function openFortuneModal() {
     const modal = document.getElementById('fortune-modal');
     if (modal) {
         modal.style.display = 'flex';
-        crackCookieModal();
+        // Reset cookie to closed state on open
+        const container = document.getElementById('cookie-container');
+        if (container) {
+            container.classList.remove('opened', 'shaking');
+        }
+        const actionBtn = document.getElementById('btn-cookie-action');
+        if (actionBtn) {
+            actionBtn.textContent = '🥠 쿠키 열기';
+        }
     }
 }
 
@@ -1790,15 +1801,65 @@ function closeFortuneModal() {
     }
 }
 
+const englishQuotes = [
+    "Believe you can and you're halfway there. - Theodore Roosevelt",
+    "It always seems impossible until it's done. - Nelson Mandela",
+    "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
+    "The only way to do great work is to love what you do. - Steve Jobs",
+    "The secret of getting ahead is getting started. - Mark Twain",
+    "Quality is not an act, it is a habit. - Aristotle",
+    "Our greatest weakness lies in giving up. - Thomas A. Edison",
+    "With the new day comes new strength and new thoughts. - Eleanor Roosevelt",
+    "Failure is the opportunity to begin again more intelligently. - Henry Ford",
+    "The future depends on what you do today. - Mahatma Gandhi",
+    "Aim for the moon. If you miss, you may hit a star. - W. Clement Stone",
+    "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
+    "Believe in yourself! Have faith in your abilities! - Norman Vincent Peale",
+    "You do not find a happy life. You make it. - Camilla Eyring Kimball",
+    "Act as if what you do makes a difference. It does. - William James",
+    "Keep your face always toward the sunshine - and shadows will fall behind you. - Walt Whitman",
+    "The power of imagination makes us infinite. - John Muir",
+    "The path to success is to take massive, determined action. - Tony Robbins"
+];
+
 function crackCookieModal() {
-    const textEl = document.getElementById('fortune-modal-text');
-    if (!textEl) return;
-    const randomIndex = Math.floor(Math.random() * fortunes.length);
-    textEl.style.opacity = '0';
-    setTimeout(() => {
-        textEl.textContent = fortunes[randomIndex];
-        textEl.style.opacity = '1';
-    }, 200);
+    const container = document.getElementById('cookie-container');
+    const textKo = document.getElementById('fortune-text-ko');
+    const textEn = document.getElementById('fortune-text-en');
+    const actionBtn = document.getElementById('btn-cookie-action');
+    
+    if (!container || !textKo || !textEn) return;
+    
+    // If already shaking or currently opened, let's close it first if we click again
+    if (container.classList.contains('shaking')) return;
+
+    if (container.classList.contains('opened')) {
+        // If already opened, close it first and animate again
+        container.classList.remove('opened');
+        if (actionBtn) actionBtn.textContent = '🥠 쿠키 열기';
+        setTimeout(() => {
+            container.classList.add('shaking');
+            setTimeout(openCookie, 600);
+        }, 300);
+    } else {
+        container.classList.add('shaking');
+        setTimeout(openCookie, 600);
+    }
+
+    function openCookie() {
+        container.classList.remove('shaking');
+        container.classList.add('opened');
+        
+        const randomKo = fortunes[Math.floor(Math.random() * fortunes.length)];
+        const randomEn = englishQuotes[Math.floor(Math.random() * englishQuotes.length)];
+        
+        textKo.textContent = randomKo;
+        textEn.textContent = randomEn;
+        
+        if (actionBtn) {
+            actionBtn.textContent = '🥠 다른 쿠키 열기';
+        }
+    }
 }
 
 // ===== 웰컴 모달 =====
