@@ -118,14 +118,14 @@ function determineTracks(row) {
     const isMed = dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('약학부') || dept.includes('한의예') || dept.includes('수의예') || dept.includes('의약');
     const isBusiness = dept.includes('경영') || dept.includes('경제') || dept.includes('상경') || dept.includes('경상');
     const isHumanities = dept.includes('인문') || dept.includes('사회') || dept.includes('사범') || dept.includes('교육') || dept.includes('예술') || dept.includes('체육') || dept.includes('의류') || dept.includes('어학') || dept.includes('언어형') || dept.includes('인문계');
-    const isNatural = dept.includes('자연') || dept.includes('공학') || dept.includes('첨단ICT') || dept.includes('소프트웨어') || dept.includes('반도체') || dept.includes('컴퓨터') || dept.includes('인공지능') || dept.includes('생명') || dept.includes('IT') || dept.includes('자연계') || isMed;
+    const isNatural = (dept.includes('자연') || dept.includes('공학') || dept.includes('첨단ICT') || dept.includes('소프트웨어') || dept.includes('반도체') || dept.includes('컴퓨터') || dept.includes('인공지능') || dept.includes('생명') || dept.includes('IT') || dept.includes('자연계')) && !isMed;
 
     if (isMed) {
         tracks.add('의약');
-    }
-    if (isNatural) {
+    } else if (isNatural) {
         tracks.add('자연');
     }
+
 
     if (isBusiness || isHumanities) {
         tracks.add('인문');

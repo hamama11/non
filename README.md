@@ -8,9 +8,10 @@
 ### 📸 인터페이스 버전별 변천사 (History)
 v1-1의 최초 기획 가안부터 고도화된 v3 최신 버전까지의 시각적 발전 과정입니다. (이미지 클릭 시 크게 보기 가능)
 
-| 초기 기획 (v1-1) | 디자인 개편 (v1) | Transpose 도입 (v2) | 최종 고도화 (v3 - 최신) |
-| :---: | :---: | :---: | :---: |
-| <a href="v1-1캡처.png" target="_blank"><img src="v1-1캡처.png" width="170" alt="v1-1" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v1캡처.png" target="_blank"><img src="v1캡처.png" width="170" alt="v1" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v2캡처.png" target="_blank"><img src="v2캡처.png" width="170" alt="v2" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v3캡처.png" target="_blank"><img src="v3캡처.png" width="170" alt="v3" style="border-radius: 4px; border: 1px solid #ddd;" /></a> |
+| 초기 기획 및 디자인 (v1-1 & v1 세로배치) | Transpose 도입 (v2) | 최종 고도화 (v3 - 최신) |
+| :---: | :---: | :---: |
+| <a href="v1-1캡처.png" target="_blank"><img src="v1-1캡처.png" width="180" alt="v1-1" style="border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;" /></a><br>▼<br><a href="v1캡처.png" target="_blank"><img src="v1캡처.png" width="180" alt="v1" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v2캡처.png" target="_blank"><img src="v2캡처.png" width="220" alt="v2" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v3캡처.png" target="_blank"><img src="v3캡처.png" width="220" alt="v3" style="border-radius: 4px; border: 1px solid #ddd;" /></a> |
+
 
 ---
 
