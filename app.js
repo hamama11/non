@@ -1233,6 +1233,7 @@ window.crackCookieModal = crackCookieModal;
 window.toggleScheduleImage = toggleScheduleImage;
 window.showWelcomeModal = showWelcomeModal;
 window.closeWelcomeModal = closeWelcomeModal;
+window.toggleGuideCard = toggleGuideCard;
 
 function toggleScheduleImage() {
     const content = document.getElementById('schedule-image-content');
@@ -1814,6 +1815,24 @@ function closeWelcomeModal() {
         modal.style.display = 'none';
     }
 }
+
+function toggleGuideCard() {
+    const card = document.getElementById('guide-card');
+    if (card) {
+        card.classList.toggle('active');
+    }
+}
+
+// Close guide card when clicking outside
+document.addEventListener('click', function(event) {
+    const widget = document.getElementById('guide-widget');
+    const card = document.getElementById('guide-card');
+    if (widget && card && card.classList.contains('active')) {
+        if (!widget.contains(event.target)) {
+            card.classList.remove('active');
+        }
+    }
+});
 
 // ===== 인터랙티브 전체 일정표 렌더링 (daily.png 스타일) =====
 

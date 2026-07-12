@@ -371,6 +371,80 @@
             </div>
         </div>
     </div>
+    <!-- Floating How-To-Use Guide Widget -->
+    <div class="floating-guide-widget no-print" id="guide-widget">
+        <button class="guide-toggle-btn" onclick="toggleGuideCard()" id="guide-toggle-btn">
+            💡 사용 가이드
+        </button>
+        <div class="guide-content-card" id="guide-card">
+            <div class="guide-header">
+                <span class="guide-title">💡 3단계 사용법 가이드</span>
+                <button class="guide-close-btn" onclick="toggleGuideCard()">×</button>
+            </div>
+            <div class="guide-steps">
+                <!-- STEP 1 -->
+                <div class="guide-step">
+                    <div class="guide-step-num">1</div>
+                    <div class="guide-step-body">
+                        <div class="guide-step-title">대학 탐색 및 담기 (택 1 or 조합)</div>
+                        <div class="guide-step-desc">원하는 대학을 탐색하고 나의 목록에 담습니다.</div>
+                        <div class="guide-step-methods">
+                            <div class="guide-method-item">
+                                <span class="guide-method-tag">방법 A</span>
+                                <span><strong>일정표 선택</strong>: 달력의 대학명 클릭 시 즉시 추가</span>
+                            </div>
+                            <div class="guide-method-item">
+                                <span class="guide-method-tag">방법 B</span>
+                                <span><strong>맞춤 필터</strong>: 수리/언어/약술형 필터 조건 검색</span>
+                            </div>
+                            <div class="guide-method-item">
+                                <span class="guide-method-tag">방법 C</span>
+                                <span><strong>대학 검색</strong>: 검색창에 직접 대학명 입력 후 추가</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="guide-step-arrow">▼</div>
+
+                <!-- STEP 2 -->
+                <div class="guide-step">
+                    <div class="guide-step-num">2</div>
+                    <div class="guide-step-body">
+                        <div class="guide-step-title">계획표 수정 & 순서 조정</div>
+                        <div class="guide-step-desc">모의 계획표 영역에서 반영 상태와 우선순위를 조율합니다.</div>
+                        <div class="guide-step-methods">
+                            <div class="guide-method-item">
+                                <span>⚙️ <strong>ON/OFF 토글</strong>: 계획표 반영 여부 실시간 전환</span>
+                            </div>
+                            <div class="guide-method-item">
+                                <span>↕️ <strong>순서 드래그</strong>: 요약 카드를 끌어(↕) 우선순위 재배치</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="guide-step-arrow">▼</div>
+
+                <!-- STEP 3 -->
+                <div class="guide-step">
+                    <div class="guide-step-num">3</div>
+                    <div class="guide-step-body">
+                        <div class="guide-step-title">정렬 및 최종 출력</div>
+                        <div class="guide-step-desc">완성된 지원 일정표와 요약 로드맵을 저장하거나 인쇄합니다.</div>
+                        <div class="guide-step-methods">
+                            <div class="guide-method-item">
+                                <span>📷 <strong>캡처 저장</strong>: 시간표+요약본을 세로형 PNG 이미지로 저장</span>
+                            </div>
+                            <div class="guide-method-item">
+                                <span>🖨️ <strong>인쇄 출력</strong>: A4 가로 최적화 포맷 인쇄 및 PDF 저장</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="app.js"></script>
 </body>
 
