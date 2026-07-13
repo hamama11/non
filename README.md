@@ -8,9 +8,9 @@
 ### 📸 인터페이스 버전별 변천사 (History)
 v1-1의 최초 기획 가안부터 고도화된 v3 최신 버전까지의 시각적 발전 과정입니다. (이미지 클릭 시 크게 보기 가능)
 
-| 초기 기획 및 디자인 (v1-1 & v1 세로배치) | Transpose 도입 (v2) | 최종 고도화 (v3) | v4 캡처 최적화 (v4 - 최신) |
+| 초기 기획 및 디자인 (v1) | Transpose 시각화 (v2) | 맞춤 필터 고도화 (v3) | 가로/세로 캡처 최적화 (v4) |
 | :---: | :---: | :---: | :---: |
-| <a href="v1-1캡처.png" target="_blank"><img src="v1-1캡처.png" width="120" alt="v1-1" style="border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;" /></a><br>▼<br><a href="v1캡처.png" target="_blank"><img src="v1캡처.png" width="120" alt="v1" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v2캡처.png" target="_blank"><img src="v2캡flex.png" width="140" alt="v2" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v3캡처.png" target="_blank"><img src="v3캡처.png" width="140" alt="v3" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v4캡처_가로.png" target="_blank"><img src="v4캡처_가로.png" width="140" alt="v4 가로" style="border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;" /></a><br>▼<br><a href="v4캡처_세로.png" target="_blank"><img src="v4캡처_세로.png" width="140" alt="v4 세로" style="border-radius: 4px; border: 1px solid #ddd;" /></a> |
+| <a href="v1-1캡처.png" target="_blank"><img src="v1-1캡처.png" width="130" alt="v1-1" style="border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;" /></a><br>▼<br><a href="v1캡처.png" target="_blank"><img src="v1캡처.png" width="130" alt="v1" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v2캡처.png" target="_blank"><img src="v2캡처.png" width="150" alt="v2" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v3캡처.png" target="_blank"><img src="v3캡처.png" width="150" alt="v3" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v4캡처_가로.png" target="_blank"><img src="v4캡처_가로.png" width="150" alt="v4 가로" style="border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;" /></a><br>▼<br><a href="v4캡처_세로.png" target="_blank"><img src="v4캡처_세로.png" width="150" alt="v4 세로" style="border-radius: 4px; border: 1px solid #ddd;" /></a> |
 
 
 ---
