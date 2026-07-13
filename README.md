@@ -8,9 +8,9 @@
 ### 📸 인터페이스 버전별 변천사 (History)
 v1-1의 최초 기획 가안부터 고도화된 v3 최신 버전까지의 시각적 발전 과정입니다. (이미지 클릭 시 크게 보기 가능)
 
-| 초기 기획 및 디자인 (v1-1 & v1 세로배치) | Transpose 도입 (v2) | 최종 고도화 (v3 - 최신) |
-| :---: | :---: | :---: |
-| <a href="v1-1캡처.png" target="_blank"><img src="v1-1캡처.png" width="180" alt="v1-1" style="border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;" /></a><br>▼<br><a href="v1캡처.png" target="_blank"><img src="v1캡처.png" width="180" alt="v1" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v2캡처.png" target="_blank"><img src="v2캡처.png" width="220" alt="v2" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v3캡처.png" target="_blank"><img src="v3캡처.png" width="220" alt="v3" style="border-radius: 4px; border: 1px solid #ddd;" /></a> |
+| 초기 기획 및 디자인 (v1-1 & v1 세로배치) | Transpose 도입 (v2) | 최종 고도화 (v3) | v4 캡처 최적화 (v4 - 최신) |
+| :---: | :---: | :---: | :---: |
+| <a href="v1-1캡처.png" target="_blank"><img src="v1-1캡처.png" width="120" alt="v1-1" style="border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;" /></a><br>▼<br><a href="v1캡처.png" target="_blank"><img src="v1캡처.png" width="120" alt="v1" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v2캡처.png" target="_blank"><img src="v2캡flex.png" width="140" alt="v2" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v3캡처.png" target="_blank"><img src="v3캡처.png" width="140" alt="v3" style="border-radius: 4px; border: 1px solid #ddd;" /></a> | <a href="v4캡처_가로.png" target="_blank"><img src="v4캡처_가로.png" width="140" alt="v4 가로" style="border-radius: 4px; border: 1px solid #ddd; margin-bottom: 6px;" /></a><br>▼<br><a href="v4캡처_세로.png" target="_blank"><img src="v4캡처_세로.png" width="140" alt="v4 세로" style="border-radius: 4px; border: 1px solid #ddd;" /></a> |
 
 
 ---
@@ -22,9 +22,9 @@ v1-1의 최초 기획 가안부터 고도화된 v3 최신 버전까지의 시각
 2. **"내 실력에 딱 맞는 논술은 어디지?" (맞춤 대학 추천)**
    - 수리논술에서 '미적분'이나 '기하'가 쥐약인가요? 혹은 '장문형' 글쓰기에 자신 있나요?
    - 내 강점과 약점(출제 범위, 난이도, 제시문 유형 등)을 체크하고 **`🎯 맞춤 대학 추천`**을 누르면, 나에게 찰떡같이 유리한 대학 리스트를 싹 뽑아줍니다.
-3. **"이렇게 써볼까? 저렇게 써볼까?" (새 시간표 탭 & 인쇄)**
+3. **"이렇게 써볼까? 저렇게 써볼까?" (새 시간표 탭 & 가로/세로 이미지 캡처)**
    - 수시 6장, 경우의 수가 많죠? `＋ 새 시간표` 버튼을 눌러 상향 지원용(Plan A), 적정 지원용(Plan B) 등 여러 버전의 시간표를 탭으로 만들어 비교해 볼 수 있어요.
-   - 완성된 계획표는 `🖨️ 인쇄(가로)` 버튼을 눌러 시간표 바로 아래에 요약표가 함께 정렬된 최적화된 레이아웃으로 출력할 수 있습니다.
+   - 완성된 계획표는 가로형 카메라 버튼(`📷 가로 ▬ 캡처`)으로 좌우 나란히 배치해 한눈에 들어오는 가로 이미지(`v4캡처_가로.png`)로 캡처하거나, 세로형 카메라 버튼(`📸 세로 █+█ 캡처`)으로 시간표 아래에 요약표를 나열한 길쭉한 형태의 고해상도 세로 이미지(`v4캡처_세로.png`)로 다운로드할 수 있습니다.
 
 ---
 

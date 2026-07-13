@@ -4,23 +4,52 @@
 function normalizeMath(raw) {
     if (!raw) return '해당없음';
     let trimmed = raw.trim();
-    if (['없음', '해당 없음', '해당없음', '해당없음', '신설', '정보 없음', ''].includes(trimmed)) return '해당없음';
-    
-    trimmed = trimmed.replace(/미적분/g, '미적')
-                     .replace(/확률과\s*통계/g, '확통')
-                     .replace(/확률과통계/g, '확통');
+    if (['없음', '해당 없음', '해당없음', '신설', '정보 없음', ''].includes(trimmed)) return '해당없음';
 
-    // 수I, 수II만 있고 미적/확통/기하가 없더라도 수리 범위를 나타내도록 그대로 처리 (기존에 해당없음으로 강제 리턴하던 조건 제거)
-    
+    // 표준 표기 정규화: '미적' -> '미', '확통' -> '확', '기하' -> '기'
+    trimmed = trimmed.replace(/미적분/g, '미')
+                     .replace(/미적/g, '미')
+                     .replace(/확률과\s*통계/g, '확')
+                     .replace(/확률과통계/g, '확')
+                     .replace(/확통/g, '확')
+                     .replace(/기하/g, '기');
+
+    // (어려움) → (상) 변환 (이전 데이터 호환)
     let result = trimmed.replace(/\(어려움\)/g, '(상)');
     const parts = result.split(',').map(p => p.trim());
     const normalized = parts.map(p => {
-        const subject = p.replace(/\([^)]*\)/g, '').trim();
+        const subject = p.replace(/\([^)]*\)/g, '').replace(/\d+모의/g, '').replace(/\s+/g, '').trim();
         const hasLevel = /\([^)]+\)/.test(p);
-        if (['미적', '확통', '기하'].includes(subject) && !hasLevel) return `${subject}(중)`;
+
+        // 단축형(미/확/기) + 기본 난이도 처리
+        if (subject === '미') return hasLevel ? p : '미(중)';
+        if (subject === '확') return hasLevel ? p : '확(중)';
+        if (subject === '기') return hasLevel ? p : '기(중)';
+
         return p;
     });
     return normalized.join(', ');
+}
+
+// 수리가중치 계산: [중]=1점 / [중상]=2점 / [상]=3점 / 표기없음=기본 1점
+function calcMathWeight(raw) {
+    if (!raw) return 0;
+    const s = raw.trim();
+    if (['', '없음', '해당 없음', '해당없음', '정보 없음', '정보없음', '신설'].includes(s)) return 0;
+    const tokens = s.split(/[,+]/).map(t => t.trim()).filter(Boolean);
+    let total = 0;
+    for (const token of tokens) {
+        let level = 1; // 기본값 [중]
+        if (/\(상\)/.test(token)) level = 3;
+        else if (/\(중상\)/.test(token)) level = 2;
+        else if (/\(중\)/.test(token)) level = 1;
+        else if (/\(어려움\)/.test(token)) level = 3;
+        const clean = token.replace(/\([^)]*\)/g, '').replace(/\d+모의/g, '').replace(/\s+/g, '').trim();
+        const isMath = /^(미적분|미적|미|확통|확률|확|기하|기)/.test(clean)
+            || clean === '미' || clean === '확' || clean === '기';
+        if (isMath) total += level;
+    }
+    return total;
 }
 
 /**
@@ -67,8 +96,16 @@ function parseEssayColumn(raw) {
 
     // 분량 파싱 (약술형이 아닌 경우)
     if (!answerLength) {
-        const lengthMatch = raw.match(/[（(]([^）)]*(?:자|글자)[^）)]*)[）)]/);
+        // '6~800자' 또는 '2~500자'와 같은 패턴을 찾기 위해 \d+ 대신 단일 숫자(\d) 또는 짧은 글자수도 포함할 수 있도록 정규식 개선
+        const lengthMatch = raw.match(/[（(]([^）)]*(?:\d+~\d+자|\d+~\d+|\d+자|글자|~\d+자)[^）)]*)[）)]/);
         if (lengthMatch) answerLength = lengthMatch[1].trim();
+    }
+
+    if (answerLength) {
+        answerLength = answerLength
+            .replace(/\b6(?=\s*[~-]\s*\d+)/g, '600')
+            .replace(/\b5(?=\s*[~-]\s*\d+)/g, '500')
+            .replace(/\b2(?=\s*[~-]\s*\d+)/g, '200');
     }
 
     return { present, answerType, answerLength };
@@ -88,6 +125,7 @@ function normalizeData(raw) {
             ...row,
             '_rowIdx': idx,
             '_수리정규화': normalizeMath(mathRaw),
+            '_수리가중치': calcMathWeight(mathRaw),
             '_제시문': parsed.present,
             '_답안유형': parsed.answerType,
             '_답안분량': parsed.answerLength,
@@ -99,7 +137,7 @@ function normalizeData(raw) {
 
 
 function determineTracks(row) {
-    const dept = row['모집계열 및 세부 학과'] || '';
+    const dept = row['모집 및 세부 학과'] || '';
     const uName = row['대학명'] || '';
     const ansType = row['_답안유형'] || '';
     const mathNorm = row['_수리정규화'] || '해당없음';
@@ -115,7 +153,7 @@ function determineTracks(row) {
     const hasMath = (mathNorm !== '해당없음' && mathNorm !== '');
     const hasHuman = ansType !== '';
 
-    const isMed = dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('약학부') || dept.includes('한의예') || dept.includes('수의예') || dept.includes('의약');
+    const isMed = dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('약학부') || dept.includes('한의예') || dept.includes('수의예') || dept.includes('의약') || dept.includes('의, 약') || dept.includes('의·약');
     const isBusiness = dept.includes('경영') || dept.includes('경제') || dept.includes('상경') || dept.includes('경상');
     const isHumanities = dept.includes('인문') || dept.includes('사회') || dept.includes('사범') || dept.includes('교육') || dept.includes('예술') || dept.includes('체육') || dept.includes('의류') || dept.includes('어학') || dept.includes('언어형') || dept.includes('인문계');
     const isNatural = (dept.includes('자연') || dept.includes('공학') || dept.includes('첨단ICT') || dept.includes('소프트웨어') || dept.includes('반도체') || dept.includes('컴퓨터') || dept.includes('인공지능') || dept.includes('생명') || dept.includes('IT') || dept.includes('자연계')) && !isMed;
@@ -337,8 +375,9 @@ function rowMatchesFilter(row, f) {
             if (needsAnyMath && !hasMath) {
                 mathPass = false;
             } else if (hasMath) {
+                const mapping = { '미적': '미', '확통': '확', '기하': '기' };
                 for (const s of ['미적', '확통', '기하']) {
-                    const hasSubject = mathNorm.includes(s);
+                    const hasSubject = mathNorm.includes(mapping[s]);
                     if (f[s] === '포함' && !hasSubject) { mathPass = false; break; }
                     if (f[s] === '불포함' && hasSubject) { mathPass = false; break; }
                 }
@@ -401,9 +440,13 @@ function searchCandidates() {
     const matched = {};
     
     state.univData.forEach(row => {
-        const name = row['대학명'] || '';
+        let name = row['대학명'] || '';
+        if (name === '중앙대') {
+            const isChangUi = (row['모집 및 세부 학과'] || '').includes('창의형');
+            name = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+        }
 
-        if (queries.some(q => name.includes(q))) {
+        if (queries.some(q => name.includes(q) || row['대학명'].includes(q))) {
             const rowTracks = determineTracks(row);
 
             if (!matched[name]) {
@@ -426,7 +469,11 @@ function recommendUniversities(forceShow = true) {
 
     state.univData.forEach(row => {
         if (rowMatchesFilter(row, f)) {
-            const name = row['대학명'] || '';
+            let name = row['대학명'] || '';
+            if (name === '중앙대') {
+                const isChangUi = (row['모집 및 세부 학과'] || '').includes('창의형');
+                name = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+            }
             const rowTracks = determineTracks(row);
 
             if (!matched[name]) {
@@ -490,6 +537,11 @@ function renderRecommendCandidates(grouped, titleText, forceShow = false) {
     }
     
     const univNames = Object.keys(grouped);
+    const getUnivMaxWeight = (univName) => {
+        const matchingUnivRows = state.univData.filter(row => row['대학명'] === univName);
+        return Math.max(...matchingUnivRows.map(row => row['_수리가중치'] || 0), 0);
+    };
+    univNames.sort((a, b) => getUnivMaxWeight(b) - getUnivMaxWeight(a));
 
     if (univNames.length === 0) {
         listEl.innerHTML = '<p style="font-size:0.85rem; color:var(--text-muted); padding: 0.5rem 0;">조건에 맞는 추천 대학이 없습니다.</p>';
@@ -534,6 +586,11 @@ function renderCandidates(grouped, titleText) {
     titleEl.textContent = titleText;
     
     const univNames = Object.keys(grouped);
+    const getUnivMaxWeight = (univName) => {
+        const matchingUnivRows = state.univData.filter(row => row['대학명'] === univName);
+        return Math.max(...matchingUnivRows.map(row => row['_수리가중치'] || 0), 0);
+    };
+    univNames.sort((a, b) => getUnivMaxWeight(b) - getUnivMaxWeight(a));
 
     if (univNames.length === 0) {
         listEl.innerHTML = '<p style="font-size:0.85rem; color:var(--text-muted);">조건에 맞는 대학이 없습니다.</p>';
@@ -666,10 +723,20 @@ function renderGrid() {
             if (row) matchingRows.push(row);
         } else {
             // Legacy: all rows for this university+track
-            const rows = state.univData.filter(row => row['대학명'] === uName);
+            const rows = state.univData.filter(row => {
+                let name = row['대학명'] || '';
+                if (name === '중앙대') {
+                    const isChangUi = (row['모집 및 세부 학과'] || '').includes('창의형');
+                    name = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+                }
+                return name === uName || row['대학명'] === uName;
+            });
             rows.forEach(row => {
                 const rowTracks = determineTracks(row);
                 if (rowTracks.includes(trackType)) {
+                    // 중앙대일 때 분리가 일치하는지 재확인
+                    if (uName.includes('창의형') && !(row['모집 및 세부 학과'] || '').includes('창의형')) return;
+                    if (uName.includes('일반형') && (row['모집 및 세부 학과'] || '').includes('창의형')) return;
                     matchingRows.push(row);
                 }
             });
@@ -801,7 +868,7 @@ function renderGrid() {
                                 <span class="card-univ">${row['대학명']}</span>
                                 <span class="card-toggle">${isOn ? 'ON' : 'OFF'}</span>
                             </div>
-                            <div class="card-track">${row['모집계열 및 세부 학과'] || ''}</div>
+                            <div class="card-track">${row['모집 및 세부 학과'] || ''}</div>
                             <div class="card-time">🕐 ${row['고사 시간'] || '시간 미정'}</div>
                             <div style="margin-top:0.25rem;">${typeBadge}${minBadge}</div>
                             ${hasMath ? `<div class="card-print-detail" style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">📐 <strong>수리:</strong> ${mathRaw || mathNorm}</div>` : ''}
@@ -865,10 +932,19 @@ function renderSummary() {
             const row = state.univData.find(r => r['_rowIdx'] === rowIdx);
             if (row) matchingRows.push(row);
         } else {
-            const rows = state.univData.filter(row => row['대학명'] === uName);
+            const rows = state.univData.filter(row => {
+                let name = row['대학명'] || '';
+                if (name === '중앙대') {
+                    const isChangUi = (row['모집 및 세부 학과'] || '').includes('창의형');
+                    name = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+                }
+                return name === uName || row['대학명'] === uName;
+            });
             rows.forEach(row => {
                 const rowTracks = determineTracks(row);
                 if (rowTracks.includes(trackType)) {
+                    if (uName.includes('창의형') && !(row['모집 및 세부 학과'] || '').includes('창의형')) return;
+                    if (uName.includes('일반형') && (row['모집 및 세부 학과'] || '').includes('창의형')) return;
                     matchingRows.push(row);
                 }
             });
@@ -977,81 +1053,104 @@ function renderSummary() {
 
             // 수능 최저학력기준 곤란도(난이도) 정렬 특수 처리
             if (sortCol === '수능 최저학력기준') {
-                const scoreA = evaluateMinimumDifficulty(valA);
-                const scoreB = evaluateMinimumDifficulty(valB);
-                // 기본 오름차순(▲) 클릭 시 난이도 높은 순 우선 정렬
-                return isAsc ? scoreB - scoreA : scoreA - scoreB;
+                const diffA = evaluateMinimumDifficulty(valA);
+                const diffB = evaluateMinimumDifficulty(valB);
+                return isAsc ? diffA - diffB : diffB - diffA;
             }
 
-            // 일반 문자열 정렬
-            return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        });
-    } else {
-        // 드래그/클릭에 의해 임의 정렬이 수행되는 경우 active.univs에 정의된 순서 보존
-        activeRows.sort((a, b) => {
-            const keyA = active.univs.find(k => k.includes('|' + a['_rowIdx'])) || '';
-            const keyB = active.univs.find(k => k.includes('|' + b['_rowIdx'])) || '';
-            return active.univs.indexOf(keyA) - active.univs.indexOf(keyB);
+            // 수리논술 범위 및 난이도 (가중치) 정렬 특수 처리
+            if (sortCol === '수리논술 범위 및 난이도') {
+                const weightA = a['_수리가중치'] || 0;
+                const weightB = b['_수리가중치'] || 0;
+                return isAsc ? weightA - weightB : weightB - weightA;
+            }
+
+            if (valA < valB) return isAsc ? -1 : 1;
+            if (valA > valB) return isAsc ? 1 : -1;
+            return 0;
         });
     }
 
-    const rows = activeRows;
-
-    const getSortIndicator = col => {
-        if (state.summarySort.column !== col) return ' ↕';
+    const getSortIndicator = (col) => {
+        if (state.summarySort.column !== col) return '';
         return state.summarySort.asc ? ' ▲' : ' ▼';
     };
+
+    const rows = activeRows;
 
     body.innerHTML = `
         <table class="summary-table">
             <thead>
                 <tr>
-                    <th style="width: 40px; text-align:center;">No.</th>
-                    <th style="cursor:pointer;" onclick="sortSummaryTable('대학명')">대학명${getSortIndicator('대학명')}</th>
-                    <th style="cursor:pointer;" onclick="sortSummaryTable('모집계열 및 세부 학과')">계열 / 학과${getSortIndicator('모집계열 및 세부 학과')}</th>
-                    <th style="cursor:pointer; text-align:center;" onclick="sortSummaryTable('고사 일자')">고사 일자${getSortIndicator('고사 일자')}</th>
-                    <th style="cursor:pointer; text-align:center;" onclick="sortSummaryTable('고사 시간')">고사 시간${getSortIndicator('고사 시간')}</th>
-                    <th style="cursor:pointer;" onclick="sortSummaryTable('수리논술 범위 및 난이도')">수리논술${getSortIndicator('수리논술 범위 및 난이도')}</th>
+                    <th style="text-align:left; white-space:nowrap;">#</th>
+                    <th style="cursor:pointer; white-space:nowrap;" onclick="sortSummaryTable('대학명')">대학명${getSortIndicator('대학명')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('모집 및 세부 학과')">계열 / 학과${getSortIndicator('모집 및 세부 학과')}</th>
+                    <th style="cursor:pointer; white-space:nowrap;" onclick="sortSummaryTable('고사 일자')">고사 일자${getSortIndicator('고사 일자')}</th>
+                    <th style="cursor:pointer;" onclick="sortSummaryTable('고사 시간')">고사 시간${getSortIndicator('고사 시간')}</th>
+                    <th style="cursor:pointer; white-space:nowrap;" onclick="sortSummaryTable('수리논술 범위 및 난이도')">수리논술(가중치)${getSortIndicator('수리논술 범위 및 난이도')}</th>
                     <th style="cursor:pointer;" onclick="sortSummaryTable('_답안유형')">인문,상경${getSortIndicator('_답안유형')}</th>
                     <th style="cursor:pointer;" onclick="sortSummaryTable('수능 최저학력기준')">수능최저(난도)${getSortIndicator('수능 최저학력기준')}</th>
-                    <th style="cursor:pointer; text-align:center;" onclick="sortSummaryTable('논술:교과:비')">논술:교과:비${getSortIndicator('논술:교과:비')}</th>
+                    <th style="cursor:pointer; white-space:nowrap;" onclick="sortSummaryTable('논술:교과:비')">논술:교과:비${getSortIndicator('논술:교과:비')}</th>
                 </tr>
             </thead>
             <tbody>
                 ${rows.map((row, idx) => {
-                    const mathRaw = row['수리논술 범위 및 난이도'] || '';
-                    const mathNorm = row['_수리정규화'] || '';
                     const ansType = row['_답안유형'] || '';
                     const ansLen = row['_답안분량'] || '';
                     const presentRaw = row['_제시문'] || '';
-                    const minRaw = row['수능 최저학력기준'] || '없음';
-                    const ratioRaw = row['논술:교과:비'] || '-';
-                    const hasMin = minRaw && minRaw !== '없음';
-                    const hasMath = mathNorm && !['해당없음','없음','해당 없음',''].includes(mathNorm);
-                    const hasLang = ansType || presentRaw;
-                    const langDisplay = ansType
-                        ? `${ansType}${ansLen ? ' (' + ansLen + ')' : ''}${presentRaw ? ' · ' + presentRaw : ''}`
-                        : presentRaw;
+                    const hasLang = (ansType || presentRaw) && (ansType !== '-' || presentRaw !== '-');
+                    let langDisplay = '-';
                     
+                    const mathNorm = row['_수리정규화'] || '해당없음';
+                    const mathRaw = row['수리논술 범위 및 난이도'] || '';
+                    const mathWeight = row['_수리가중치'] || 0;
+                    const hasMath = mathWeight > 0;
+
+                    const minRaw = row['수능 최저학력기준'] || '';
+                    const hasMin = minRaw && minRaw !== '없음';
+
+                    const ratioRaw = row['논술:교과:비'] || row['전형 비율 (논술:교과:비교과)'] || '-';
+
+                    if (hasLang) {
+                        langDisplay = ansType
+                            ? `${ansType}${ansLen ? ' (' + ansLen + ')' : ''}${presentRaw ? ' · ' + presentRaw : ''}`
+                            : presentRaw;
+                    } else {
+                        langDisplay = '-';
+                    }
+
+                    // 계열 밸지 생성
+                    const rowTracks = determineTracks(row);
+                    const trackBadges = rowTracks.map(t => {
+                        if (t === '인문') return '<span style="font-size:0.62rem; font-weight:700; background:rgba(190,58,99,0.1); color:#be3a63; border:1px solid rgba(190,58,99,0.3); border-radius:3px; padding:1px 4px; margin-right:2px; white-space:nowrap;">인문</span>';
+                        if (t === '자연') return '<span style="font-size:0.62rem; font-weight:700; background:rgba(26,107,68,0.1); color:#1a6b44; border:1px solid rgba(26,107,68,0.3); border-radius:3px; padding:1px 4px; margin-right:2px; white-space:nowrap;">자연</span>';
+                        if (t === '의약') return '<span style="font-size:0.62rem; font-weight:700; background:rgba(107,63,160,0.1); color:#6b3fa0; border:1px solid rgba(107,63,160,0.3); border-radius:3px; padding:1px 4px; margin-right:2px; white-space:nowrap;">의약</span>';
+                        return '';
+                    }).join('');
+
                     // 역방향으로 uniqueKey 찾기
-                    const uKey = active.univs.find(k => k.includes('|' + row['_rowIdx'])) || `${row['대학명']} (${row['모집계열 및 세부 학과']})|${row['_rowIdx']}`;
+                    const uKey = active.univs.find(k => k.includes('|' + row['_rowIdx'])) || `${row['대학명']} (${row['모집 및 세부 학과']})|${row['_rowIdx']}`;
 
                     return `
                         <tr draggable="true" data-key="${uKey}">
-                            <td style="text-align:center; color:var(--text-muted); font-size:0.8rem;">${idx + 1}</td>
+                            <td style="text-align:left; color:var(--text-muted); font-size:0.8rem;">${idx + 1}</td>
                             <td><strong>${row['대학명']}</strong></td>
-                            <td style="font-size:0.78rem; color:var(--text-muted);">${row['모집계열 및 세부 학과'] || '-'}</td>
-                            <td style="text-align:center; font-weight:600;">${row['고사 일자'] || '미정'}</td>
-                            <td style="text-align:center; font-size:0.8rem;">${row['고사 시간'] || '미정'}</td>
-                            <td style="font-size:0.78rem;">${hasMath ? `<span class="summary-badge badge-math">수리</span> ${mathRaw || mathNorm}` : '<span style="color:var(--text-muted)">-</span>'}</td>
-                            <td style="font-size:0.78rem;">${hasLang ? `<span style="color:#be3a63; font-weight:600;">${langDisplay}</span>` : '<span style="color:var(--text-muted)">-</span>'}</td>
+                            <td style="font-size:0.78rem; white-space:normal; word-break:break-word; min-width:90px;">${trackBadges}<span style="color:var(--text-muted);">${row['모집 및 세부 학과'] || '-'}</span></td>
+                            <td style="text-align:left; font-weight:600; white-space:nowrap;">${row['고사 일자'] || '미정'}</td>
+                            <td style="text-align:left; font-size:0.78rem; white-space:normal; word-break:break-word; min-width:70px;">${row['고사 시간'] || '미정'}</td>
+                            <td style="font-size:0.78rem; white-space:normal; word-break:break-word;">${hasMath ? `${mathRaw || mathNorm} <span style="font-weight:700; color:#4f46e5;">(${mathWeight}점)</span>` : '<span style="color:var(--text-muted)">-</span>'}</td>
+                            <td style="font-size:0.78rem; white-space:normal; word-break:break-word;">${langDisplay !== '-' ? `<span style="color:#be3a63; font-weight:600;">${langDisplay}</span>` : '<span style="color:var(--text-muted)">-</span>'}</td>
                             <td style="font-size:0.72rem; white-space: pre-wrap; word-break: break-word; line-height:1.5;">${hasMin ? `<span class="summary-badge badge-min" style="white-space:normal;">${minRaw.replace(/,\s*/g, ',\n').replace(/\s*\/\s*/g, '\n/ ')}</span>` : '<span style="color:var(--text-muted)">없음</span>'}</td>
-                            <td style="font-size:0.78rem; color:var(--text-muted); text-align:center;">${ratioRaw}</td>
+                            <td style="font-size:0.78rem; color:var(--text-muted); text-align:left; white-space:nowrap;">${ratioRaw}</td>
                         </tr>
                     `;
                 }).join('')}
             </tbody>
         </table>
+        <div style="margin-top:0.45rem; padding:0.35rem 0.65rem; background:rgba(99,102,241,0.05); border:1px solid rgba(99,102,241,0.18); border-radius:0.4rem; font-size:0.67rem; color:var(--text-muted); line-height:1.7;">
+            <strong style="color:var(--text-main);">📐 수리가중치 산정기준:</strong> 미적/확통/기하만 산정 (수Ⅰ,수Ⅱ 제외)&emsp;▪&emsp;[중] = 1점 / [중상] = 2점 / [상] = 3점<br>
+            <span>ex) 미, 확(중상) → 1+2 = 3&emsp;|&emsp;미, 확(상), 기(중) → 1+3+1 = 5</span>
+        </div>
     `;
 
     panel.style.display = 'block';
@@ -1329,13 +1428,20 @@ function captureTimetable() {
         tableLayout: summaryTable.style.tableLayout,
         width: summaryTable.style.width
     } : null;
+    let origThWidths = [];
     if (summaryTable) {
         summaryTable.style.fontSize = '0.65rem';
         summaryTable.style.tableLayout = 'fixed';
         summaryTable.style.width = '100%';
+        const ths = summaryTable.querySelectorAll('th');
+        const targetWidths = ['4%', '10%', '16%', '9%', '13%', '15%', '15%', '13%', '5%'];
+        ths.forEach((th, idx) => {
+            origThWidths.push({ el: th, width: th.style.width });
+            if (targetWidths[idx]) th.style.width = targetWidths[idx];
+        });
     }
 
-    // [4] 캡처용 좌우 배치 (2칼럼) 임시 스타일 적용
+    // [4] 가로형(Side-by-side) 캡처용 임시 스타일 적용
     const originalContainerFlexDir = container.style.flexDirection;
     const originalContainerAlign = container.style.alignItems;
     const originalLeftWidth = leftPanel.style.width;
@@ -1345,11 +1451,11 @@ function captureTimetable() {
 
     container.style.flexDirection = 'row';
     container.style.alignItems = 'flex-start';
-    leftPanel.style.width = '750px';
-    rightPanel.style.width = '650px';
+    leftPanel.style.width = '780px';
+    rightPanel.style.width = '640px';
     rightPanel.style.overflow = 'visible';
     area.style.overflow = 'visible';
-    area.style.width = '1440px';
+    area.style.width = '1450px';
 
     // 캡처 완료 시 원래 상태로 복원
     const restoreStyles = () => {
@@ -1368,6 +1474,9 @@ function captureTimetable() {
             summaryTable.style.fontSize = origSummaryTableStyle.fontSize;
             summaryTable.style.tableLayout = origSummaryTableStyle.tableLayout;
             summaryTable.style.width = origSummaryTableStyle.width;
+            origThWidths.forEach(item => {
+                item.el.style.width = item.width;
+            });
         }
         container.style.flexDirection = originalContainerFlexDir;
         container.style.alignItems = originalContainerAlign;
@@ -1391,7 +1500,129 @@ function captureTimetable() {
     }).then(canvas => {
         restoreStyles();
         const link = document.createElement('a');
-        link.download = '나의_논술_모의계획표.png';
+        link.download = '나의_논술_모의계획표_가로.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }).catch(err => {
+        console.error('이미지 캡처 오류:', err);
+        restoreStyles();
+        alert('이미지 저장 중 오류가 발생했습니다. 브라우저 호환성을 확인해 주세요.');
+    });
+}
+
+function captureTimetableVertical() {
+    const area = document.getElementById('capture-area');
+    const container = document.getElementById('capture-flex-container');
+    const leftPanel = document.getElementById('capture-left-panel');
+    const rightPanel = document.getElementById('capture-right-panel');
+
+    if (!area || !container || !leftPanel || !rightPanel) return;
+
+    // [0] OFF 카드 임시 숨기기
+    const offCards = area.querySelectorAll('.timetable-card.off');
+    offCards.forEach(card => { card.setAttribute('data-hidden-for-capture', 'true'); card.style.display = 'none'; });
+
+    // [1] timetable-bg-wrapper: 세로로 긴 시간표 전체가 보이도록 overflow 해제
+    const timetableWrapper = area.querySelector('.timetable-bg-wrapper');
+    const origTimetableOverflow = timetableWrapper ? timetableWrapper.style.overflowX : null;
+    const origTimetableMaxH = timetableWrapper ? timetableWrapper.style.maxHeight : null;
+    if (timetableWrapper) {
+        timetableWrapper.style.overflow = 'visible';
+        timetableWrapper.style.maxHeight = 'none';
+    }
+
+    // [2] summary-body: 요약표 width 100%
+    const summaryBody = area.querySelector('#summary-body');
+    const origSummaryOverflow = summaryBody ? summaryBody.style.overflowX : null;
+    const origSummaryWidth = summaryBody ? summaryBody.style.width : null;
+    if (summaryBody) {
+        summaryBody.style.overflowX = 'visible';
+        summaryBody.style.width = '100%';
+    }
+
+    // [3] 요약 테이블: table-layout:fixed + font-size 축소
+    const summaryTable = area.querySelector('.summary-table');
+    const origSummaryTableStyle = summaryTable ? {
+        fontSize: summaryTable.style.fontSize,
+        tableLayout: summaryTable.style.tableLayout,
+        width: summaryTable.style.width
+    } : null;
+
+    let origThWidths = [];
+    if (summaryTable) {
+        summaryTable.style.fontSize = '0.65rem';
+        summaryTable.style.tableLayout = 'fixed';
+        summaryTable.style.width = '100%';
+        const ths = summaryTable.querySelectorAll('th');
+        const targetWidths = ['4%', '10%', '16%', '9%', '13%', '15%', '15%', '13%', '5%'];
+        ths.forEach((th, idx) => {
+            origThWidths.push({ el: th, width: th.style.width });
+            if (targetWidths[idx]) th.style.width = targetWidths[idx];
+        });
+    }
+
+    // [4] 세로형(시간표 아래 요약표) 캡처용 임시 스타일 적용
+    const originalContainerFlexDir = container.style.flexDirection;
+    const originalContainerAlign = container.style.alignItems;
+    const originalContainerGap = container.style.gap;
+    const originalLeftWidth = leftPanel.style.width;
+    const originalRightWidth = rightPanel.style.width;
+    const originalAreaOverflow = area.style.overflow;
+    const originalAreaWidth = area.style.width;
+
+    container.style.flexDirection = 'column';
+    container.style.alignItems = 'stretch';
+    container.style.gap = '2rem';
+    leftPanel.style.width = '100%';
+    rightPanel.style.width = '100%';
+    rightPanel.style.overflow = 'visible';
+    area.style.overflow = 'visible';
+    area.style.width = '960px'; // A4 폭(960px 정도)에 맞춰 정렬
+
+    // 캡처 완료 시 원래 상태로 복원
+    const restoreStyles = () => {
+        offCards.forEach(card => { card.removeAttribute('data-hidden-for-capture'); card.style.display = ''; });
+        if (timetableWrapper) {
+            timetableWrapper.style.overflowX = origTimetableOverflow || '';
+            timetableWrapper.style.overflow = '';
+            timetableWrapper.style.maxHeight = origTimetableMaxH || '';
+        }
+        if (summaryBody) {
+            summaryBody.style.overflowX = origSummaryOverflow || '';
+            summaryBody.style.width = origSummaryWidth || '';
+        }
+        if (summaryTable && origSummaryTableStyle) {
+            summaryTable.style.fontSize = origSummaryTableStyle.fontSize;
+            summaryTable.style.tableLayout = origSummaryTableStyle.tableLayout;
+            summaryTable.style.width = origSummaryTableStyle.width;
+            origThWidths.forEach(item => {
+                item.el.style.width = item.width;
+            });
+        }
+        container.style.flexDirection = originalContainerFlexDir;
+        container.style.alignItems = originalContainerAlign;
+        container.style.gap = originalContainerGap;
+        leftPanel.style.width = originalLeftWidth;
+        rightPanel.style.width = originalRightWidth;
+        rightPanel.style.overflow = '';
+        area.style.overflow = originalAreaOverflow;
+        area.style.width = originalAreaWidth;
+    };
+
+    // html2canvas 실행
+    html2canvas(area, {
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+        scale: 2,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        windowWidth: 1000,
+        windowHeight: area.scrollHeight + 100
+    }).then(canvas => {
+        restoreStyles();
+        const link = document.createElement('a');
+        link.download = '나의_논술_모의계획표_세로.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
     }).catch(err => {
@@ -1464,12 +1695,23 @@ ${inlineStyles}
   /* 요약 테이블 크기 유연화 */
   #summary-body { overflow: visible !important; width: 100% !important; }
   #summary-panel { display: block !important; margin-top: 0 !important; }
-  .summary-table { width: 100% !important; table-layout: fixed !important; font-size: 0.7rem !important; word-break: break-word !important; }
-  .summary-table th, .summary-table td { padding: 0.35rem 0.4rem !important; white-space: normal !important; word-break: break-word !important; }
+  .summary-table { width: 100% !important; table-layout: fixed !important; font-size: 0.65rem !important; word-break: break-word !important; }
+  .summary-table th, .summary-table td { padding: 0.25rem 0.25rem !important; white-space: normal !important; word-break: break-word !important; }
   .summary-badge { display: inline-block; white-space: normal !important; padding: 0.15rem 0.3rem !important; font-size: 0.62rem !important; }
   
+  /* 요약표 인쇄/출력 시 열 너비 분배 고정 */
+  .summary-table th:nth-child(1), .summary-table td:nth-child(1) { width: 4% !important; }
+  .summary-table th:nth-child(2), .summary-table td:nth-child(2) { width: 10% !important; }
+  .summary-table th:nth-child(3), .summary-table td:nth-child(3) { width: 16% !important; }
+  .summary-table th:nth-child(4), .summary-table td:nth-child(4) { width: 9% !important; }
+  .summary-table th:nth-child(5), .summary-table td:nth-child(5) { width: 13% !important; }
+  .summary-table th:nth-child(6), .summary-table td:nth-child(6) { width: 15% !important; }
+  .summary-table th:nth-child(7), .summary-table td:nth-child(7) { width: 15% !important; }
+  .summary-table th:nth-child(8), .summary-table td:nth-child(8) { width: 13% !important; }
+  .summary-table th:nth-child(9), .summary-table td:nth-child(9) { width: 5% !important; }
+  
   .timetable-card.off { display: none !important; }
-  @page { size: A4 landscape; margin: 0.8cm; }
+  @page { size: A4 portrait; margin: 0.8cm; }
 </style>
 </head>
 <body>
@@ -2079,7 +2321,7 @@ function renderInteractiveSchedule() {
                         : `background:transparent;color:${colorVal};border-color:${colorVal};`;
                     
                     if (!isMatched) {
-                        btnStyle += 'opacity:0.25;filter:grayscale(60%);';
+                        btnStyle += isAdded ? 'opacity:0.8;' : 'opacity:0.25;filter:grayscale(60%);';
                     }
 
                     buttons.push(
@@ -2170,7 +2412,9 @@ function renderInteractiveSchedule() {
                     let btnStyle = isAdded
                         ? `background:${c};color:#fff;border-color:${c};`
                         : `background:transparent;color:${colorVal};border-color:${colorVal};`;
-                    if (!isMatched) btnStyle += 'opacity:0.25;filter:grayscale(60%);';
+                    if (!isMatched) {
+                        btnStyle += isAdded ? 'opacity:0.8;' : 'opacity:0.25;filter:grayscale(60%);';
+                    }
 
                     buttons.push(
                         `<button class="sched-btn-block${isAdded ? ' sched-btn-block--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${isAdded ? '✓' : ''}</button>`
