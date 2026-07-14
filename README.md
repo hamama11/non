@@ -1,22 +1,6 @@
 ﻿<div align="center">
 
 <br/>
-
-## 📸 Version History
-
-| 초기 기획 (v1) | Transpose 시각화 (v2) | 맞춤 필터 고도화 (v3) | 가로/세로 최적화 (v4) |
-| :---: | :---: | :---: | :---: |
-| <a href="v1-1캡처.png" target="_blank"><img src="v1-1캡처.png" width="140" style="border-radius:6px;border:1px solid #ddd;" /></a><br>▼<br><a href="v1캡처.png" target="_blank"><img src="v1캡처.png" width="140" style="border-radius:6px;border:1px solid #ddd;" /></a> | <a href="v2캡처.png" target="_blank"><img src="v2캡처.png" width="160" style="border-radius:6px;border:1px solid #ddd;" /></a> | <a href="v3캡처.png" target="_blank"><img src="v3캡처.png" width="160" style="border-radius:6px;border:1px solid #ddd;" /></a> | <a href="v4캡처_가로.png" target="_blank"><img src="v4캡처_가로.png" width="160" style="border-radius:6px;border:1px solid #ddd;margin-bottom:4px;" /></a><br>▼<br><a href="v4캡처_세로.png" target="_blank"><img src="v4캡처_세로.png" width="160" style="border-radius:6px;border:1px solid #ddd;" /></a> |
-
-| 버전 | 주요 업데이트 |
-|---|---|
-| **v4** | 수리 가중치 배열 추가 및 계산 체계 고도화 |
-| **v3** | 약술형 포함 DB 전면 통합 · PNG 이미지 캡처 · 드래그 순서 조정 |
-| **v2** | 인쇄 기능 탑재 · Transpose 캘린더 시각화 |
-| **v1** | 최초 기획 · 대학 검색 및 시간표 연동 |
-
----
-
 # 🎓 논술 지원 시간표 설계기 v4
 ### *SM Smart Match — Your **Success Map** for 논술 지원 전략*
 
@@ -30,6 +14,21 @@
 [![Version](https://img.shields.io/badge/Version-v4.0-F6C9D6?style=for-the-badge&labelColor=be3a63&color=be3a63)]
 [![Target](https://img.shields.io/badge/대상-2027학년도%20논술%20수험생-F6C9D6?style=for-the-badge&labelColor=4f46e5&color=4f46e5)]
 </div>
+
+---
+
+## 📸 Version History
+
+| 초기 기획 (v1) | Transpose 시각화 (v2) | 맞춤 필터 고도화 (v3) | 가로/세로 최적화 (v4) |
+| :---: | :---: | :---: | :---: |
+| <a href="v1-1캡처.png" target="_blank"><img src="v1-1캡처.png" width="140" style="border-radius:6px;border:1px solid #ddd;" /></a><br>▼<br><a href="v1캡처.png" target="_blank"><img src="v1캡처.png" width="140" style="border-radius:6px;border:1px solid #ddd;" /></a> | <a href="v2캡처.png" target="_blank"><img src="v2캡처.png" width="160" style="border-radius:6px;border:1px solid #ddd;" /></a> | <a href="v3캡처.png" target="_blank"><img src="v3캡처.png" width="160" style="border-radius:6px;border:1px solid #ddd;" /></a> | <a href="v4캡처_가로.png" target="_blank"><img src="v4캡처_가로.png" width="160" style="border-radius:6px;border:1px solid #ddd;margin-bottom:4px;" /></a><br>▼<br><a href="v4캡처_세로.png" target="_blank"><img src="v4캡처_세로.png" width="160" style="border-radius:6px;border:1px solid #ddd;" /></a> |
+
+| 버전 | 주요 업데이트 |
+|---|---|
+| **v4** | 수리 가중치 배열 추가 및 계산 체계 고도화 |
+| **v3** | 약술형 포함 DB 전면 통합 · PNG 이미지 캡처 · 드래그 순서 조정 |
+| **v2** | 인쇄 기능 탑재 · Transpose 캘린더 시각화 |
+| **v1** | 최초 기획 · 대학 검색 및 시간표 연동 |
 
 ---
 
