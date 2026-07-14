@@ -961,13 +961,6 @@ function renderSummary() {
         return true;
     };
 
-    const activeRows = matchingRows.filter(isCardOn);
-
-    if (activeRows.length === 0) {
-        panel.style.display = 'none';
-        return;
-    }
-
     const parseTimeForSort = timeStr => {
         if (!timeStr) return 999;
         const m = timeStr.match(/(\d{1,2})[:시]/);
@@ -1040,7 +1033,7 @@ function renderSummary() {
     const isAsc = state.summarySort.asc;
 
     if (sortCol) {
-        activeRows.sort((a, b) => {
+        matchingRows.sort((a, b) => {
             let valA = a[sortCol] || '';
             let valB = b[sortCol] || '';
 
@@ -1072,17 +1065,29 @@ function renderSummary() {
     }
 
     const getSortIndicator = (col) => {
-        if (state.summarySort.column !== col) return '';
-        return state.summarySort.asc ? ' ▲' : ' ▼';
+        if (state.summarySort.column !== col)
+            return '<span style="opacity:0.28; font-size:0.65rem; margin-left:2px;">↕</span>';
+        return state.summarySort.asc
+            ? '<span style="color:#0F5A43; font-size:0.7rem; font-weight:900; margin-left:2px;">▲</span>'
+            : '<span style="color:#be3a63; font-size:0.7rem; font-weight:900; margin-left:2px;">▼</span>';
     };
 
-    const rows = activeRows;
+    const rows = matchingRows;
+
+    // summary-count-badge 업데이트 (캡처 영역 안에 있어 이미지에 포함됨)
+    const summaryCountBadge = document.getElementById('summary-count-badge');
+    if (summaryCountBadge) {
+        const totalCount = rows.length;
+        const onCount = rows.filter(row => isCardOn(row)).length;
+        summaryCountBadge.textContent = totalCount > 0 ? `${onCount}/${totalCount}` : '';
+        summaryCountBadge.style.display = totalCount > 0 ? 'inline-block' : 'none';
+    }
 
     body.innerHTML = `
         <table class="summary-table">
             <thead>
                 <tr>
-                    <th style="text-align:left; white-space:nowrap;">#</th>
+                    <th style="text-align:center; white-space:nowrap; width:45px;"></th>
                     <th style="cursor:pointer; white-space:nowrap;" onclick="sortSummaryTable('대학명')">대학명${getSortIndicator('대학명')}</th>
                     <th style="cursor:pointer;" onclick="sortSummaryTable('모집 및 세부 학과')">계열 / 학과${getSortIndicator('모집 및 세부 학과')}</th>
                     <th style="cursor:pointer; white-space:nowrap;" onclick="sortSummaryTable('고사 일자')">고사 일자${getSortIndicator('고사 일자')}</th>
@@ -1130,10 +1135,17 @@ function renderSummary() {
 
                     // 역방향으로 uniqueKey 찾기
                     const uKey = active.univs.find(k => k.includes('|' + row['_rowIdx'])) || `${row['대학명']} (${row['모집 및 세부 학과']})|${row['_rowIdx']}`;
+                    const rowIdx = row['_rowIdx'];
+                    const isOn = isCardOn(row);
 
                     return `
-                        <tr draggable="true" data-key="${uKey}">
-                            <td style="text-align:left; color:var(--text-muted); font-size:0.8rem;">${idx + 1}</td>
+                        <tr draggable="true" data-key="${uKey}" class="${isOn ? '' : 'summary-row-off'}" style="${isOn ? '' : 'opacity: 0.55; background-color: #f8fafc;'}">
+                            <td style="text-align:center;" class="no-drag-click">
+                                <button onclick="toggleCardOnOff(${rowIdx}); event.stopPropagation();" 
+                                        style="font-size: 0.58rem; font-weight: 800; padding: 0.1rem 0.3rem; border-radius: 3px; cursor: pointer; border: 1px solid ${isOn ? '#0F5A43' : '#cbd5e1'}; background-color: ${isOn ? '#0F5A43' : '#f1f5f9'}; color: ${isOn ? '#ffffff' : '#64748b'}; width: 34px; line-height: 1.2; text-align: center; display: inline-block; transition: all 0.2s;">
+                                    ${isOn ? 'ON' : 'OFF'}
+                                </button>
+                            </td>
                             <td><strong>${row['대학명']}</strong></td>
                             <td style="font-size:0.78rem; white-space:normal; word-break:break-word; min-width:90px;">${trackBadges}<span style="color:var(--text-muted);">${row['모집 및 세부 학과'] || '-'}</span></td>
                             <td style="text-align:left; font-weight:600; white-space:nowrap;">${row['고사 일자'] || '미정'}</td>
@@ -1232,8 +1244,8 @@ function setupSummaryDragAndClick() {
 
         // 2. 행 직접 클릭으로 순서 조정
         row.addEventListener('click', (e) => {
-            // 헤더 클릭 등은 무시
-            if (e.target.tagName === 'TH' || e.target.closest('th') || e.target.tagName === 'BUTTON') return;
+            // 헤더 클릭 및 체크박스/드래그 제외 영역 클릭 시 무시
+            if (e.target.tagName === 'TH' || e.target.closest('th') || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.closest('.no-drag-click')) return;
 
             const active = getActiveTimetable();
 
@@ -1399,9 +1411,12 @@ function captureTimetable() {
 
     if (!area || !container || !leftPanel || !rightPanel) return;
 
-    // [0] OFF 카드 임시 숨기기 (캡처 시 ON된 것들만 보이게)
+    // [0] OFF 카드 및 요약표 OFF 행 임시 숨기기 (캡처 시 ON된 것들만 보이게)
     const offCards = area.querySelectorAll('.timetable-card.off');
     offCards.forEach(card => { card.setAttribute('data-hidden-for-capture', 'true'); card.style.display = 'none'; });
+    
+    const offRows = area.querySelectorAll('tr.summary-row-off');
+    offRows.forEach(row => { row.setAttribute('data-hidden-for-capture', 'true'); row.style.display = 'none'; });
 
     // [1] timetable-bg-wrapper: 세로로 긴 시간표 전체가 보이도록 overflow 해제
     const timetableWrapper = area.querySelector('.timetable-bg-wrapper');
@@ -1412,7 +1427,7 @@ function captureTimetable() {
         timetableWrapper.style.maxHeight = 'none';
     }
 
-    // [2] summary-body: 요약표가 rightPanel 너비(650px) 안에 맞게 → width 100%로 고정
+    // [2] summary-body: 요약표가 rightPanel 너비 안에 맞게 → width 100%로 고정
     const summaryBody = area.querySelector('#summary-body');
     const origSummaryOverflow = summaryBody ? summaryBody.style.overflowX : null;
     const origSummaryWidth = summaryBody ? summaryBody.style.width : null;
@@ -1421,24 +1436,17 @@ function captureTimetable() {
         summaryBody.style.width = '100%';
     }
 
-    // [3] 요약 테이블: table-layout:fixed + font-size 축소로 650px 안에 자동 줄바꿈
+    // [3] 요약 테이블: table-layout:auto로 콘텐츠 길이에 따라 열 너비 자동 조정
     const summaryTable = area.querySelector('.summary-table');
     const origSummaryTableStyle = summaryTable ? {
         fontSize: summaryTable.style.fontSize,
         tableLayout: summaryTable.style.tableLayout,
         width: summaryTable.style.width
     } : null;
-    let origThWidths = [];
     if (summaryTable) {
         summaryTable.style.fontSize = '0.65rem';
-        summaryTable.style.tableLayout = 'fixed';
-        summaryTable.style.width = '100%';
-        const ths = summaryTable.querySelectorAll('th');
-        const targetWidths = ['4%', '10%', '16%', '9%', '13%', '15%', '15%', '13%', '5%'];
-        ths.forEach((th, idx) => {
-            origThWidths.push({ el: th, width: th.style.width });
-            if (targetWidths[idx]) th.style.width = targetWidths[idx];
-        });
+        summaryTable.style.tableLayout = 'auto';
+        summaryTable.style.width = 'auto';
     }
 
     // [4] 가로형(Side-by-side) 캡처용 임시 스타일 적용
@@ -1459,8 +1467,9 @@ function captureTimetable() {
 
     // 캡처 완료 시 원래 상태로 복원
     const restoreStyles = () => {
-        // OFF 카드 복원
+        // OFF 요소 복원
         offCards.forEach(card => { card.removeAttribute('data-hidden-for-capture'); card.style.display = ''; });
+        offRows.forEach(row => { row.removeAttribute('data-hidden-for-capture'); row.style.display = ''; });
         if (timetableWrapper) {
             timetableWrapper.style.overflowX = origTimetableOverflow || '';
             timetableWrapper.style.overflow = '';
@@ -1474,9 +1483,6 @@ function captureTimetable() {
             summaryTable.style.fontSize = origSummaryTableStyle.fontSize;
             summaryTable.style.tableLayout = origSummaryTableStyle.tableLayout;
             summaryTable.style.width = origSummaryTableStyle.width;
-            origThWidths.forEach(item => {
-                item.el.style.width = item.width;
-            });
         }
         container.style.flexDirection = originalContainerFlexDir;
         container.style.alignItems = originalContainerAlign;
@@ -1518,9 +1524,12 @@ function captureTimetableVertical() {
 
     if (!area || !container || !leftPanel || !rightPanel) return;
 
-    // [0] OFF 카드 임시 숨기기
+    // [0] OFF 카드 및 요약표 OFF 행 임시 숨기기
     const offCards = area.querySelectorAll('.timetable-card.off');
     offCards.forEach(card => { card.setAttribute('data-hidden-for-capture', 'true'); card.style.display = 'none'; });
+
+    const offRows = area.querySelectorAll('tr.summary-row-off');
+    offRows.forEach(row => { row.setAttribute('data-hidden-for-capture', 'true'); row.style.display = 'none'; });
 
     // [1] timetable-bg-wrapper: 세로로 긴 시간표 전체가 보이도록 overflow 해제
     const timetableWrapper = area.querySelector('.timetable-bg-wrapper');
@@ -1540,25 +1549,17 @@ function captureTimetableVertical() {
         summaryBody.style.width = '100%';
     }
 
-    // [3] 요약 테이블: table-layout:fixed + font-size 축소
+    // [3] 요약 테이블: table-layout:auto로 콘텐츠 길이에 따라 열 너비 자동 조정
     const summaryTable = area.querySelector('.summary-table');
     const origSummaryTableStyle = summaryTable ? {
         fontSize: summaryTable.style.fontSize,
         tableLayout: summaryTable.style.tableLayout,
         width: summaryTable.style.width
     } : null;
-
-    let origThWidths = [];
     if (summaryTable) {
         summaryTable.style.fontSize = '0.65rem';
-        summaryTable.style.tableLayout = 'fixed';
-        summaryTable.style.width = '100%';
-        const ths = summaryTable.querySelectorAll('th');
-        const targetWidths = ['4%', '10%', '16%', '9%', '13%', '15%', '15%', '13%', '5%'];
-        ths.forEach((th, idx) => {
-            origThWidths.push({ el: th, width: th.style.width });
-            if (targetWidths[idx]) th.style.width = targetWidths[idx];
-        });
+        summaryTable.style.tableLayout = 'auto';
+        summaryTable.style.width = 'auto';
     }
 
     // [4] 세로형(시간표 아래 요약표) 캡처용 임시 스타일 적용
@@ -1582,6 +1583,7 @@ function captureTimetableVertical() {
     // 캡처 완료 시 원래 상태로 복원
     const restoreStyles = () => {
         offCards.forEach(card => { card.removeAttribute('data-hidden-for-capture'); card.style.display = ''; });
+        offRows.forEach(row => { row.removeAttribute('data-hidden-for-capture'); row.style.display = ''; });
         if (timetableWrapper) {
             timetableWrapper.style.overflowX = origTimetableOverflow || '';
             timetableWrapper.style.overflow = '';
@@ -1595,9 +1597,6 @@ function captureTimetableVertical() {
             summaryTable.style.fontSize = origSummaryTableStyle.fontSize;
             summaryTable.style.tableLayout = origSummaryTableStyle.tableLayout;
             summaryTable.style.width = origSummaryTableStyle.width;
-            origThWidths.forEach(item => {
-                item.el.style.width = item.width;
-            });
         }
         container.style.flexDirection = originalContainerFlexDir;
         container.style.alignItems = originalContainerAlign;
