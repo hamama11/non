@@ -153,7 +153,24 @@ function determineTracks(row) {
     const hasMath = (mathNorm !== '해당없음' && mathNorm !== '');
     const hasHuman = ansType !== '';
 
-    const isMed = dept.includes('의예') || dept.includes('치의예') || dept.includes('의학') || dept.includes('약학') || dept.includes('약학부') || dept.includes('한의예') || dept.includes('수의예') || dept.includes('의약') || dept.includes('의, 약') || dept.includes('의·약');
+    const isMed = (
+        dept.includes('의예') ||
+        dept.includes('치의예') ||
+        dept.includes('의학') ||
+        dept.includes('약학') ||
+        dept.includes('약학부') ||
+        dept.includes('한의예') ||
+        dept.includes('한의') ||
+        dept.includes('수의예') ||
+        dept.includes('수의') ||
+        dept.includes('의약') ||
+        dept.includes('의, 약') ||
+        dept.includes('의·약') ||
+        dept.includes('의, 치') ||
+        dept.includes('의·치') ||
+        (dept.includes('약') && !dept.includes('약술형')) ||
+        (dept.includes('의') && !dept.includes('의류') && !dept.includes('창의') && !dept.includes('의사') && dept !== '사회')
+    );
     const isBusiness = dept.includes('경영') || dept.includes('경제') || dept.includes('상경') || dept.includes('경상');
     const isHumanities = dept.includes('인문') || dept.includes('사회') || dept.includes('사범') || dept.includes('교육') || dept.includes('예술') || dept.includes('체육') || dept.includes('의류') || dept.includes('어학') || dept.includes('언어형') || dept.includes('인문계');
     const isNatural = (dept.includes('자연') || dept.includes('공학') || dept.includes('첨단ICT') || dept.includes('소프트웨어') || dept.includes('반도체') || dept.includes('컴퓨터') || dept.includes('인공지능') || dept.includes('생명') || dept.includes('IT') || dept.includes('자연계')) && !isMed;
@@ -191,7 +208,8 @@ function determineTracks(row) {
         tracks.add('인문');
     }
 
-    return Array.from(tracks);
+    const order = { '인문': 1, '자연': 2, '의약': 3 };
+    return Array.from(tracks).sort((a, b) => (order[a] || 99) - (order[b] || 99));
 }
 
 // ===== 상태 관리 =====
@@ -552,7 +570,8 @@ function renderRecommendCandidates(grouped, titleText, forceShow = false) {
     const active = getActiveTimetable();
 
     listEl.innerHTML = univNames.map(name => {
-        const tracks = [...grouped[name]];
+        const order = { '인문': 1, '자연': 2, '의약': 3 };
+        const tracks = [...grouped[name]].sort((a, b) => (order[a] || 99) - (order[b] || 99));
 
         const buttonsHtml = tracks.map(trackType => {
             const uniqueKey = `${name} (${trackType})`;
@@ -601,7 +620,8 @@ function renderCandidates(grouped, titleText) {
     const active = getActiveTimetable();
 
     listEl.innerHTML = univNames.map(name => {
-        const tracks = [...grouped[name]];
+        const order = { '인문': 1, '자연': 2, '의약': 3 };
+        const tracks = [...grouped[name]].sort((a, b) => (order[a] || 99) - (order[b] || 99));
 
         const buttonsHtml = tracks.map(trackType => {
             const uniqueKey = `${name} (${trackType})`;
@@ -2600,5 +2620,17 @@ function toggleScheduleImage() {
     }
 }
 
+function saveStateToLocalStorage() {
+    try {
+        localStorage.setItem('essay_planner_state', JSON.stringify({
+            timetables: state.timetables,
+            activeTimetableId: state.activeTimetableId
+        }));
+    } catch (e) {
+        console.error('Failed to save state to localStorage:', e);
+    }
+}
+
 // ===== DOM 시작 =====
 document.addEventListener('DOMContentLoaded', init);
+
