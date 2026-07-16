@@ -145,7 +145,12 @@ function determineTracks(row) {
     // 성균관대 특수 처리: 수리형은 자연, 언어형은 인문으로 분류
     if (uName.includes('성균관')) {
         if (dept.includes('언어형')) return ['인문'];
-        if (dept.includes('수리형')) return ['자연'];
+        if (dept.includes('수리형')) {
+            if (dept.includes('의') || dept.includes('약') || dept.includes('수리형 3')) {
+                return ['자연', '의약'];
+            }
+            return ['자연'];
+        }
     }
 
     const tracks = new Set();
@@ -294,6 +299,9 @@ async function init() {
         alert('data.csv 파일을 읽지 못했습니다. 파일명과 위치를 확인하세요.');
     }
 
+    // 레거시 키 마이그레이션 (rowIdx 없는 키 → rowIdx 포함 키)
+    migrateLegacyUnivKeys();
+
     renderTabs();
     renderActiveTags();
     renderGrid();
@@ -314,6 +322,49 @@ async function init() {
     updateDDay();
     setInterval(updateDDay, 1000);
 }
+
+// ===== 레거시 유니버시티 키 마이그레이션 =====
+// "대학명 (계열)" 형식 → "대학명 (계열)|rowIdx" 형식으로 변환
+function migrateLegacyUnivKeys() {
+    state.timetables.forEach(tt => {
+        const newUnivs = [];
+        tt.univs.forEach(k => {
+            // 이미 rowIdx 포함 형식이면 그대로
+            if (/\|\d+$/.test(k)) {
+                newUnivs.push(k);
+                return;
+            }
+            // 레거시 형식: "대학명 (계열)"
+            const m = k.match(/^(.+)\s\(([^)]+)\)$/);
+            if (!m) {
+                newUnivs.push(k);
+                return;
+            }
+            const uName = m[1];
+            const trackType = m[2];
+            const matchingRows = state.univData.filter(r => {
+                let rName = r['대학명'] || '';
+                if (rName === '중앙대') {
+                    const isChangUi = (r['모집 및 세부 학과'] || '').includes('창의형');
+                    rName = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+                }
+                return (rName === uName || r['대학명'] === uName) && determineTracks(r).includes(trackType);
+            });
+            if (matchingRows.length > 0) {
+                matchingRows.forEach(r => {
+                    const newKey = `${uName} (${trackType})|${r['_rowIdx']}`;
+                    if (!newUnivs.includes(newKey)) newUnivs.push(newKey);
+                });
+            } else {
+                // 매칭 없으면 원본 유지
+                newUnivs.push(k);
+            }
+        });
+        tt.univs = newUnivs;
+    });
+}
+
+
 
 // ===== 필터 값 가져오기 =====
 function getFilters() {
@@ -524,15 +575,30 @@ function addAllRecommend() {
     univNames.forEach(name => {
         const tracks = [...state.currentRecommendations[name]];
         tracks.forEach(trackType => {
-            const uniqueKey = `${name} (${trackType})`;
-            if (!active.univs.includes(uniqueKey)) {
-                active.univs.push(uniqueKey);
-                addedCount++;
+            const prefix = `${name} (${trackType})`;
+            const alreadyAdded = active.univs.some(k => k === prefix || k.startsWith(prefix + '|'));
+            if (!alreadyAdded) {
+                const matchingRows = state.univData.filter(r => {
+                    let rName = r['대학명'] || '';
+                    if (rName === '중앙대') {
+                        const isChangUi = (r['모집 및 세부 학과'] || '').includes('창의형');
+                        rName = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+                    }
+                    return (rName === name || r['대학명'] === name) && determineTracks(r).includes(trackType);
+                });
+                matchingRows.forEach(r => {
+                    const key = `${name} (${trackType})|${r['_rowIdx']}`;
+                    if (!active.univs.includes(key)) {
+                        active.univs.push(key);
+                        addedCount++;
+                    }
+                });
             }
         });
     });
 
     if (addedCount > 0) {
+        saveStateToLocalStorage();
         renderActiveTags();
         renderGrid();
         renderSummary();
@@ -574,11 +640,11 @@ function renderRecommendCandidates(grouped, titleText, forceShow = false) {
         const tracks = [...grouped[name]].sort((a, b) => (order[a] || 99) - (order[b] || 99));
 
         const buttonsHtml = tracks.map(trackType => {
-            const uniqueKey = `${name} (${trackType})`;
-            const isAdded = active.univs.includes(uniqueKey);
-
+            const prefix = `${name} (${trackType})`;
+            const isAdded = active.univs.some(k => k === prefix || k.startsWith(prefix + '|'));
+            const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             return `
-                <button class="${isAdded ? 'btn-primary' : 'btn-secondary'}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: normal; margin-left: 0.25rem;" onclick="event.stopPropagation(); toggleUniv('${uniqueKey}')">
+                <button class="${isAdded ? 'btn-primary' : 'btn-secondary'}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: normal; margin-left: 0.25rem;" onclick="event.stopPropagation(); toggleUnivByName('${safeName}', '${trackType}')">
                      ${trackType} ${isAdded ? '✓' : '＋'}
                 </button>
             `;
@@ -624,11 +690,11 @@ function renderCandidates(grouped, titleText) {
         const tracks = [...grouped[name]].sort((a, b) => (order[a] || 99) - (order[b] || 99));
 
         const buttonsHtml = tracks.map(trackType => {
-            const uniqueKey = `${name} (${trackType})`;
-            const isAdded = active.univs.includes(uniqueKey);
-
+            const prefix = `${name} (${trackType})`;
+            const isAdded = active.univs.some(k => k === prefix || k.startsWith(prefix + '|'));
+            const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             return `
-                <button class="${isAdded ? 'btn-primary' : 'btn-secondary'}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: normal; margin-left: 0.25rem;" onclick="event.stopPropagation(); toggleUniv('${uniqueKey}')">
+                <button class="${isAdded ? 'btn-primary' : 'btn-secondary'}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: normal; margin-left: 0.25rem;" onclick="event.stopPropagation(); toggleUnivByName('${safeName}', '${trackType}')">
                      ${trackType} ${isAdded ? '✓' : '＋'}
                 </button>
             `;
@@ -645,36 +711,71 @@ function renderCandidates(grouped, titleText) {
     secEl.style.display = 'block';
 }
 
-// ===== 대학 추가 / 제거 =====
-function toggleUniv(uniqueKey) {
+// ===== 대학 추가 / 제거 (이름+계열 기반, rowIdx 포함 형식으로 저장) =====
+function toggleUnivByName(uName, trackType) {
     const active = getActiveTimetable();
-    const idx = active.univs.indexOf(uniqueKey);
+    const prefix = `${uName} (${trackType})`;
+    const existingIdxs = [];
+    active.univs.forEach((k, i) => {
+        if (k === prefix || k.startsWith(prefix + '|')) existingIdxs.push(i);
+    });
 
-    if (idx > -1) {
-        active.univs.splice(idx, 1);
+    if (existingIdxs.length > 0) {
+        for (let i = existingIdxs.length - 1; i >= 0; i--) {
+            active.univs.splice(existingIdxs[i], 1);
+        }
     } else {
-        active.univs.push(uniqueKey);
+        const matchingRows = state.univData.filter(r => {
+            let name = r['대학명'] || '';
+            if (name === '중앙대') {
+                const isChangUi = (r['모집 및 세부 학과'] || '').includes('창의형');
+                name = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+            }
+            return (name === uName || r['대학명'] === uName) && determineTracks(r).includes(trackType);
+        });
+        matchingRows.forEach(r => {
+            const key = `${uName} (${trackType})|${r['_rowIdx']}`;
+            if (!active.univs.includes(key)) active.univs.push(key);
+        });
     }
 
+    saveStateToLocalStorage();
     renderActiveTags();
     renderGrid();
     renderSummary();
 
     const titleText = document.getElementById('candidate-title')?.textContent;
-
     if (titleText) {
-        const query = titleText.includes('검색') ? document.getElementById('univ-search').value.trim() : '';
-        if (query) {
-            searchCandidates();
-        }
+        const query = titleText.includes('검색') ? document.getElementById('univ-search')?.value.trim() : '';
+        if (query) searchCandidates();
     }
 
     recommendUniversities(false);
-    
-    if (typeof renderInteractiveSchedule === 'function') {
-        renderInteractiveSchedule();
-    }
+    if (typeof renderInteractiveSchedule === 'function') renderInteractiveSchedule();
 }
+
+// 레거시 호환: uniqueKey "대학명 (계열)" 형식이면 toggleUnivByName으로 위임
+function toggleUniv(uniqueKey) {
+    const legacyMatch = uniqueKey.match(/^(.+)\s\(([^|)]+)\)$/);
+    if (legacyMatch) {
+        toggleUnivByName(legacyMatch[1], legacyMatch[2]);
+        return;
+    }
+    const active = getActiveTimetable();
+    const idx = active.univs.indexOf(uniqueKey);
+    if (idx > -1) {
+        active.univs.splice(idx, 1);
+    } else {
+        active.univs.push(uniqueKey);
+    }
+    saveStateToLocalStorage();
+    renderActiveTags();
+    renderGrid();
+    renderSummary();
+    recommendUniversities(false);
+    if (typeof renderInteractiveSchedule === 'function') renderInteractiveSchedule();
+}
+
 
 // ===== 담은 대학 태그 렌더링 =====
 function renderActiveTags() {
@@ -683,13 +784,32 @@ function renderActiveTags() {
 
     if (!container) return;
 
-    container.innerHTML = active.univs.map(name => `
-        <div class="tag">
-            <span>${name}</span>
-            <span class="tag-remove" onclick="event.stopPropagation(); toggleUniv('${name}')">×</span>
-        </div>
-    `).join('');
+    // 같은 "대학명 (계열)" prefix 기준으로 그룹화해서 하나의 태그만 표시
+    const seen = new Set();
+    const tags = [];
+    active.univs.forEach(k => {
+        const m = k.match(/^(.+\s\([^|)]+\))(?:\|\d+)?$/);
+        const label = m ? m[1] : k;
+        if (!seen.has(label)) {
+            seen.add(label);
+            // label에서 이름과 계열 추출
+            const pm = label.match(/^(.+)\s\(([^)]+)\)$/);
+            const safeName = pm ? pm[1].replace(/\\/g, '\\\\').replace(/'/g, "\\'") : label.replace(/'/g, "\\'");
+            const trackType = pm ? pm[2] : '';
+            const onclick = pm
+                ? `toggleUnivByName('${safeName}', '${trackType}')`
+                : `toggleUniv('${k.replace(/'/g, "\\'")}')`;
+            tags.push(`
+                <div class="tag">
+                    <span>${label}</span>
+                    <span class="tag-remove" onclick="event.stopPropagation(); ${onclick}">×</span>
+                </div>
+            `);
+        }
+    });
+    container.innerHTML = tags.join('');
 }
+
 
 // ===== 시간표 그리드 렌더링 =====
 function renderGrid() {
@@ -882,7 +1002,7 @@ function renderGrid() {
 
                     html += `
                         <div class="timetable-card ${isOn ? '' : 'off'} ${isOverlap ? 'overlap' : ''}" 
-                             style="--stack-idx: ${i}; z-index: ${cards.length - i};"
+                             style="--stack-idx: ${i}; z-index: ${cards.length - i}; position: relative;"
                              onclick="toggleCardOnOff(${rowIdx})">
                             <div class="card-header">
                                 <span class="card-univ">${row['대학명']}</span>
@@ -922,9 +1042,33 @@ function toggleCardOnOff(rowIdx) {
         active.manualOverrides[rowIdx] = !active.manualOverrides[rowIdx];
     }
 
+    saveStateToLocalStorage();
     renderGrid();
     renderSummary();
+    if (typeof renderInteractiveSchedule === 'function') {
+        renderInteractiveSchedule();
+    }
 }
+
+// ===== 대학 전형 제거 (RowIdx 기준 안전 제거) =====
+function removeUnivByRowIdx(rowIdx) {
+    const active = getActiveTimetable();
+    const idx = active.univs.findIndex(k => k.endsWith('|' + rowIdx));
+    if (idx > -1) {
+        active.univs.splice(idx, 1);
+    }
+    delete active.manualOverrides[rowIdx];
+    
+    saveStateToLocalStorage();
+    renderActiveTags();
+    renderGrid();
+    renderSummary();
+    recommendUniversities(false);
+    if (typeof renderInteractiveSchedule === 'function') {
+        renderInteractiveSchedule();
+    }
+}
+window.removeUnivByRowIdx = removeUnivByRowIdx;
 
 // ===== 요약 패널 렌더링 =====
 function renderSummary() {
@@ -1165,6 +1309,9 @@ function renderSummary() {
                                         style="font-size: 0.58rem; font-weight: 800; padding: 0.1rem 0.3rem; border-radius: 3px; cursor: pointer; border: 1px solid ${isOn ? '#0F5A43' : '#cbd5e1'}; background-color: ${isOn ? '#0F5A43' : '#f1f5f9'}; color: ${isOn ? '#ffffff' : '#64748b'}; width: 34px; line-height: 1.2; text-align: center; display: inline-block; transition: all 0.2s;">
                                     ${isOn ? 'ON' : 'OFF'}
                                 </button>
+                                <button onclick="removeUnivByRowIdx(${rowIdx}); event.stopPropagation();"
+                                        title="제거"
+                                        style="margin-left:2px; width:18px; height:18px; border-radius:50%; border:none; background:rgba(190,58,99,0.7); color:#fff; font-size:0.65rem; font-weight:900; cursor:pointer; line-height:1; display:inline-flex; align-items:center; justify-content:center; padding:0; vertical-align:middle;">×</button>
                             </td>
                             <td><strong>${row['대학명']}</strong></td>
                             <td style="font-size:0.78rem; white-space:normal; word-break:break-word; min-width:90px;">${trackBadges}<span style="color:var(--text-muted);">${row['모집 및 세부 학과'] || '-'}</span></td>
@@ -2178,6 +2325,14 @@ function extractSubLabel(dept) {
     if (dept.includes('T4')) return 'T4';
     return '';
 }
+function getCalLabel(date, trackType, uName) {
+    if (trackType === '의약') {
+        if (date.includes('11.22') && uName.includes('경희대')) return '경희(한)';
+        if (date.includes('12.05') && uName.includes('아주대')) return '아주(의)';
+        if (date.includes('12.06') && uName.includes('아주대')) return '아주(약)';
+    }
+    return shortenUnivName(uName);
+}
 
 function shortenUnivName(name) {
     if (!name) return '';
@@ -2326,11 +2481,43 @@ function renderInteractiveSchedule() {
                     if (seenSession.has(uName)) return;
                     seenSession.add(uName);
 
-                    const shortName = shortenUnivName(uName);
+                    const shortName = getCalLabel(date, trackType, uName);
                     const displayLabel = shortName;
                     
                     const matches = trackRows.filter(tr => tr['대학명'] === uName);
-                    const isAdded = matches.some(tr => active.univs.includes(`${uName} (${trackType})|${tr._rowIdx}`));
+                    
+                    // 각 행에 대해 저장된 키가 존재하는지 검사 (중앙대 특수 처리)
+                    const checkRowAdded = (tr) => {
+                        let name = tr['대학명'];
+                        if (name === '중앙대') {
+                            const isChangUi = (tr['모집 및 세부 학과'] || '').includes('창의형');
+                            name = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+                        }
+                        const prefix = `${name} (${trackType})`;
+                        return active.univs.includes(prefix) || active.univs.includes(`${prefix}|${tr._rowIdx}`);
+                    };
+
+                    const addedMatches = matches.filter(checkRowAdded);
+                    const isAdded = addedMatches.length > 0;
+                    
+                    // 계획표 ON/OFF 반영
+                    // 레거시 키인지 판별 (레거시 키는 '|' 문자가 없음)
+                    const hasLegacyKey = active.univs.some(k => {
+                        let name = uName;
+                        if (name === '중앙대') {
+                            // 현재 루프의 어떤 행과 매칭되는지 확인
+                            return matches.some(tr => {
+                                const isChangUi = (tr['모집 및 세부 학과'] || '').includes('창의형');
+                                const subName = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+                                return k === `${subName} (${trackType})`;
+                            });
+                        }
+                        return k === `${name} (${trackType})`;
+                    });
+                    
+                    // 계획표 ON/OFF 반영 (레거시 키일 때는 isAllOff 미지원)
+                    const isAllOff = !hasLegacyKey && isAdded && addedMatches.every(tr => active.manualOverrides[tr._rowIdx] === false);
+                    const isSomeOff = !hasLegacyKey && isAdded && addedMatches.some(tr => active.manualOverrides[tr._rowIdx] === false);
                     const isMatched = matches.some(tr => rowMatchesFilter(tr, f));
 
                     const colorVal = getUnivTextColor(uName);
@@ -2339,12 +2526,19 @@ function renderInteractiveSchedule() {
                         ? `background:${c};color:#fff;border-color:${c};`
                         : `background:transparent;color:${colorVal};border-color:${colorVal};`;
                     
+                    if (isAllOff) {
+                        btnStyle = `background:#94a3b8;color:#fff;border-color:#94a3b8;text-decoration:line-through;opacity:0.6;`;
+                    } else if (isSomeOff) {
+                        btnStyle += `opacity:0.75;`;
+                    }
+                    
                     if (!isMatched) {
                         btnStyle += isAdded ? 'opacity:0.8;' : 'opacity:0.25;filter:grayscale(60%);';
                     }
 
+                    const toggleLabel = isAdded ? (isAllOff ? ' ✗' : ' ✓') : '';
                     buttons.push(
-                        `<button class="sched-btn${isAdded ? ' sched-btn--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${isAdded ? ' ✓' : ''}</button>`
+                        `<button class="sched-btn${isAdded ? ' sched-btn--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${toggleLabel}</button>`
                     );
                 });
 
@@ -2419,11 +2613,42 @@ function renderInteractiveSchedule() {
                     if (seenSession.has(uName)) return;
                     seenSession.add(uName);
 
-                    const shortName = shortenUnivName(uName);
+                    const shortName = getCalLabel(date, trackType, uName);
                     const displayLabel = shortName;
                     
                     const matches = rowsForCell.filter(tr => tr['대학명'] === uName);
-                    const isAdded = matches.some(tr => active.univs.includes(`${uName} (${trackType})|${tr._rowIdx}`));
+                    
+                    // 각 행에 대해 저장된 키가 존재하는지 검사 (중앙대 특수 처리)
+                    const checkRowAdded = (tr) => {
+                        let name = tr['대학명'];
+                        if (name === '중앙대') {
+                            const isChangUi = (tr['모집 및 세부 학과'] || '').includes('창의형');
+                            name = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+                        }
+                        const prefix = `${name} (${trackType})`;
+                        return active.univs.includes(prefix) || active.univs.includes(`${prefix}|${tr._rowIdx}`);
+                    };
+
+                    const addedMatches = matches.filter(checkRowAdded);
+                    const isAdded = addedMatches.length > 0;
+                    
+                    // 계획표 ON/OFF 반영
+                    // 레거시 키인지 판별 (레거시 키는 '|' 문자가 없음)
+                    const hasLegacyKey = active.univs.some(k => {
+                        let name = uName;
+                        if (name === '중앙대') {
+                            return matches.some(tr => {
+                                const isChangUi = (tr['모집 및 세부 학과'] || '').includes('창의형');
+                                const subName = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+                                return k === `${subName} (${trackType})`;
+                            });
+                        }
+                        return k === `${name} (${trackType})`;
+                    });
+                    
+                    // 계획표 ON/OFF 반영
+                    const isAllOff = !hasLegacyKey && isAdded && addedMatches.every(tr => active.manualOverrides[tr._rowIdx] === false);
+                    const isSomeOff = !hasLegacyKey && isAdded && addedMatches.some(tr => active.manualOverrides[tr._rowIdx] === false);
                     const isMatched = matches.some(tr => rowMatchesFilter(tr, f));
 
                     const colorVal = getUnivTextColor(uName);
@@ -2431,12 +2656,20 @@ function renderInteractiveSchedule() {
                     let btnStyle = isAdded
                         ? `background:${c};color:#fff;border-color:${c};`
                         : `background:transparent;color:${colorVal};border-color:${colorVal};`;
+                    
+                    if (isAllOff) {
+                        btnStyle = `background:#94a3b8;color:#fff;border-color:#94a3b8;text-decoration:line-through;opacity:0.6;`;
+                    } else if (isSomeOff) {
+                        btnStyle += `opacity:0.75;`;
+                    }
+                    
                     if (!isMatched) {
                         btnStyle += isAdded ? 'opacity:0.8;' : 'opacity:0.25;filter:grayscale(60%);';
                     }
 
+                    const toggleLabel = isAdded ? (isAllOff ? '✗' : '✓') : '';
                     buttons.push(
-                        `<button class="sched-btn-block${isAdded ? ' sched-btn-block--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${isAdded ? '✓' : ''}</button>`
+                        `<button class="sched-btn-block${isAdded ? ' sched-btn-block--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${toggleLabel}</button>`
                     );
                 });
                 return `<td class="sched-cell" style="background:${meta.bg}; padding: 0.1rem 0.05rem; text-align: center;"><div style="display: flex; flex-wrap: wrap; gap: 1px; justify-content: center; align-items: flex-start; min-height: 28px;">${buttons.join('')}</div></td>`;
@@ -2594,6 +2827,7 @@ function toggleUnivAndRenderSchedule(uName, trackType, date) {
         });
     }
 
+    saveStateToLocalStorage();
     renderActiveTags();
     renderGrid();
     renderSummary();
