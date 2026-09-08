@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대학별 논술 합격선(점수) 분석 대시보드 - SM Smart Match</title>
+    <meta name="description" content="2027학년도 주요 대학 논술 전형 합격점수 및 100점 만점 환산점수를 조건별로 필터링하고 시각적으로 비교 분석합니다.">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="scores.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="scores.js"></script>
+</head>
+
+<body>
+    <div class="app-wrapper">
+        <!-- Header -->
+        <header class="scores-header">
+            <div>
+                <h1>
+                    📊 대학별 논술 합격선 분석 
+                    <span class="badge-tag">점수 데이터 탐색기</span>
+                </h1>
+                <p>대학별 / 계열별 합격점수(100점 만점 환산) 비교 및 상세 학과 분석</p>
+            </div>
+            <div>
+                <a href="index.html" class="nav-back-btn">
+                    <span>📅 논술 시간표 설계기로 돌아가기</span>
+                    <span>→</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Summary Metrics -->
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">선택된 학과(모집단위) 수</div>
+                <div class="metric-value" id="metric-total-count">-</div>
+                <div class="metric-sub">조건 만족 모집단위</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">필터링 학과 평균 합격선 (100점 환산)</div>
+                <div class="metric-value" id="metric-avg-score" style="color: #0F5A43;">-</div>
+                <div class="metric-sub">선택된 모집단위 전체 평균</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">최고 합격선 학과 (100점 환산)</div>
+                <div class="metric-value" id="metric-max-score" style="color: #C2547A; font-size: 1.25rem;">-</div>
+                <div class="metric-sub">가장 높은 100점 환산점수</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">분석 대상 대학 수</div>
+                <div class="metric-value" id="metric-univ-count" style="color: #4F46E5;">-</div>
+                <div class="metric-sub">선택된 조건 내 포함 대학</div>
+            </div>
+        </section>
+
+        <!-- Main Dashboard Layout -->
+        <main class="dashboard-layout">
+            <!-- Left Sidebar Filter -->
+            <aside class="filter-sidebar">
+                <div class="filter-header">
+                    <h2>🎯 다중 맞춤 필터</h2>
+                    <button class="btn-reset" onclick="resetAllFilters()">초기화 ↺</button>
+                </div>
+
+                <!-- 검색창 -->
+                <div class="filter-group">
+                    <div class="filter-group-title">
+                        <span>🔍 대학 / 학과명 검색</span>
+                    </div>
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search-input" class="search-input" placeholder="대학명 또는 학과명 입력..." oninput="handleSearch(this.value)">
+                    </div>
+                </div>
+
+                <!-- 지역구분 다중선택 필터 -->
+                <div class="filter-group">
+                    <div class="filter-group-title">
+                        <span>📍 지역구분 (다중선택)</span>
+                        <div>
+                            <button class="filter-select-all-btn" onclick="toggleAllFilters('region', true)">전체선택</button>
+                            <span style="color: #D1D5DB; font-size: 0.7rem;">|</span>
+                            <button class="filter-select-all-btn" onclick="toggleAllFilters('region', false)">해제</button>
+                        </div>
+                    </div>
+                    <div class="filter-tags-grid" id="region-filters">
+                        <!-- JS 동적 생성 -->
+                    </div>
+                </div>
+
+                <!-- 계열구분 다중선택 필터 -->
+                <div class="filter-group">
+                    <div class="filter-group-title">
+                        <span>🎓 계열구분 (다중선택)</span>
+                        <div>
+                            <button class="filter-select-all-btn" onclick="toggleAllFilters('field', true)">전체선택</button>
+                            <span style="color: #D1D5DB; font-size: 0.7rem;">|</span>
+                            <button class="filter-select-all-btn" onclick="toggleAllFilters('field', false)">해제</button>
+                        </div>
+                    </div>
+                    <div class="filter-tags-grid" id="field-filters">
+                        <!-- JS 동적 생성 -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Content Area (Charts + Data Table) -->
+            <section class="dashboard-content">
+                <!-- Comparison Bar Charts -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3 class="chart-card-title">🏛️ 대학별 평균 합격선 비교</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">100점 만점 환산 기준</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="univChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3 class="chart-card-title">📚 계열별 평균 합격선 비교</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">100점 만점 환산 기준</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="fieldChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Table Section -->
+                <div class="table-section" id="table-card">
+                    <div class="table-header-bar">
+                        <div class="table-title">
+                            <span>📋 전체 학과별 논술 점수 상세 현황</span>
+                            <span class="badge-tag" id="table-count-badge">총 0건</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">
+                            * 헤더를 클릭하면 해당 열 기준으로 정렬됩니다. (기본: 100점환산 내림차순)
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="scores-table">
+                            <thead>
+                                <tr>
+                                    <th id="th-대학명" onclick="handleSort('대학명')">
+                                        대학명 <span class="sort-icon">⇅</span>
+                                    </th>
+                                    <th id="th-지역구분" onclick="handleSort('지역구분')">
+                                        지역구분 <span class="sort-icon">⇅</span>
+                                    </th>
+                                    <th id="th-계열구분" onclick="handleSort('계열구분')">
+                                        계열구분 <span class="sort-icon">⇅</span>
+                                    </th>
+                                    <th id="th-학과명" onclick="handleSort('학과명')">
+                                        학과명 <span class="sort-icon">⇅</span>
+                                    </th>
+                                    <th id="th-논술점수" onclick="handleSort('논술점수')" style="text-align: right;">
+                                        논술점수 <span class="sort-icon">⇅</span>
+                                    </th>
+                                    <th id="th-환산점수" class="active-sort" onclick="handleSort('환산점수')">
+                                        100점만점환산 <span class="sort-icon">▼</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <tr>
+                                    <td colspan="6" class="no-data-msg">데이터를 불러오는 중입니다...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination-container" id="pagination-container">
+                        <!-- JS 렌더링 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>
