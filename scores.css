@@ -1463,72 +1463,114 @@ body {
     color: var(--accent-dark-pink);
 }
 
-.floating-action-group {
+/* ── Right Floating Dock (화면 우측 고정 슬림 도크 / 화면 가리지 않게 최적화) ── */
+.right-floating-dock {
     position: fixed;
-    bottom: 2rem;
-    right: 2rem;
+    right: 1.25rem;
+    bottom: 2.5rem;
     z-index: 1999;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid var(--border-color);
+    border-radius: 2.2rem;
+    padding: 0.45rem 0.35rem;
+    box-shadow: 0 8px 24px rgba(15, 90, 67, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06);
+    gap: 0.2rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.94;
 }
 
-.floating-scroll-btn {
-    display: inline-flex;
+.right-floating-dock:hover {
+    opacity: 1;
+    background: #FFFFFF;
+    box-shadow: 0 12px 32px rgba(15, 90, 67, 0.24);
+    transform: translateY(-2px);
+}
+
+.dock-btn {
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #FFFFFF;
-    color: var(--primary);
-    border: 2px solid var(--border-color);
-    padding: 0.65rem 0.85rem;
-    border-radius: 999px;
-    font-weight: 800;
-    font-size: 0.82rem;
-    box-shadow: 0 4px 14px rgba(15, 90, 67, 0.15);
+    width: 48px;
+    height: 48px;
+    border-radius: 1rem;
+    border: none;
+    background: transparent;
+    color: #334155;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    white-space: nowrap;
-    font-family: var(--font-family);
-}
-
-.floating-scroll-btn:hover {
-    transform: translateY(-2px);
-    background: #FFF0F4;
-    border-color: var(--primary);
-    box-shadow: 0 6px 18px rgba(15, 90, 67, 0.25);
-}
-
-.floating-site-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    background: var(--primary);
-    color: #ffffff !important;
     text-decoration: none;
-    padding: 0.65rem 1.15rem;
-    border-radius: 999px;
+    transition: all 0.18s ease;
+    padding: 0;
+    gap: 0.15rem;
+    font-family: var(--font-family);
+    user-select: none;
+}
+
+.dock-btn:hover {
+    background: #FFF0F4;
+    color: var(--primary);
+    transform: scale(1.08);
+}
+
+.dock-btn:active {
+    transform: scale(0.95);
+}
+
+.dock-btn.active {
+    background: var(--primary);
+    color: #FFFFFF;
+}
+
+.dock-btn.active .dock-icon,
+.dock-btn.active .dock-label {
+    color: #FFFFFF !important;
+}
+
+.dock-btn-link:hover {
+    background: #E8F5EE;
+    color: var(--primary);
+}
+
+.dock-icon {
+    font-size: 1.15rem;
+    line-height: 1;
+    color: var(--primary);
+    transition: color 0.18s ease;
+}
+
+.dock-label {
+    font-size: 0.65rem;
     font-weight: 800;
-    font-size: 0.88rem;
-    border: 2px solid var(--border-color);
-    box-shadow: 0 6px 18px rgba(15, 90, 67, 0.35), 0 2px 6px rgba(0, 0, 0, 0.1);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.floating-site-btn:hover {
-    transform: translateY(-3px) scale(1.03);
-    background: var(--primary-hover);
-    box-shadow: 0 10px 24px rgba(15, 90, 67, 0.45);
-    border-color: #ffffff;
-}
-
-.floating-btn-icon {
-    font-size: 1.1rem;
+    letter-spacing: -0.02em;
     line-height: 1;
 }
 
-.floating-btn-text {
-    font-weight: 800;
-    letter-spacing: -0.01em;
+.dock-divider {
+    width: 24px;
+    height: 1px;
+    background: rgba(246, 201, 214, 0.6);
+    margin: 0.1rem 0;
+}
+
+@media (max-width: 768px) {
+    .right-floating-dock {
+        right: 0.6rem;
+        bottom: 1.5rem;
+        padding: 0.35rem 0.25rem;
+    }
+    .dock-btn {
+        width: 42px;
+        height: 42px;
+    }
+    .dock-icon {
+        font-size: 1rem;
+    }
+    .dock-label {
+        font-size: 0.6rem;
+    }
 }

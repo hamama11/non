@@ -228,6 +228,40 @@ const state = {
 };
 
 const DATA_URL = './data.csv';
+const SCORES_URL = './essay_scores.csv';
+window.SCORES_CACHE = [];
+
+// ===== 점수 데이터 로딩 (서브페이지 scores.html과 유기적 연동) =====
+async function loadScoresData() {
+    try {
+        const res = await fetch(SCORES_URL);
+        if (!res.ok) return;
+        const csv = await res.text();
+        const raw = parseCSV(csv);
+        window.SCORES_CACHE = raw.map(row => ({
+            대학명: (row['대학명'] || '').trim(),
+            학과명: (row['학과명'] || '').trim(),
+            환산점수: parseFloat(row['100점만점환산']) || 0,
+            cut70: parseFloat(row['70%Cut']) || null,
+            최저점: parseFloat(row['최저점_커트라인']) || null,
+            대학평균: parseFloat(row['대학평균환산점수']) || null,
+            출제라인: row['합격점수라인의미'] || ''
+        }));
+    } catch (e) {
+        console.warn('essay_scores.csv 로드 실패 (연동 비활성화):', e);
+    }
+}
+
+function getScoreForUniv(uName, dept) {
+    if (!window.SCORES_CACHE || window.SCORES_CACHE.length === 0) return null;
+    const cleanUName = uName.replace(/\(창의형\)|\(일반형\)/g, '').trim();
+    if (dept) {
+        const cleanDept = dept.trim();
+        const match = window.SCORES_CACHE.find(s => s.대학명 === cleanUName && (cleanDept.includes(s.학과명) || s.학과명.includes(cleanDept)));
+        if (match) return match;
+    }
+    return window.SCORES_CACHE.find(s => s.대학명 === cleanUName) || null;
+}
 
 // ===== CSV 데이터 로딩 =====
 async function loadCsvData() {
@@ -293,10 +327,10 @@ function getActiveTimetable() {
 // ===== 초기화 =====
 async function init() {
     try {
-        await loadCsvData();
+        await Promise.all([loadCsvData(), loadScoresData()]);
     } catch (err) {
-        console.error('data.csv 읽기 실패:', err);
-        alert('data.csv 파일을 읽지 못했습니다. 파일명과 위치를 확인하세요.');
+        console.error('데이터 읽기 실패:', err);
+        alert('데이터 파일을 읽지 못했습니다. 파일명과 위치를 확인하세요.');
     }
 
     // 레거시 키 마이그레이션 (rowIdx 없는 키 → rowIdx 포함 키)
@@ -984,35 +1018,42 @@ function renderGrid() {
                     const hasLang = rowAnsType !== '' || rowPresent !== '';
 
                     const typeBadge = hasMath
-                        ? `<span style="display:inline-block; font-size:0.65rem; background-color:#818cf8; color:white; padding:1px 4px; border-radius:3px; margin-right:3px;">수리</span>`
+                        ? `<span class="badge-mini badge-math">수리</span>`
                         : hasLang
-                            ? `<span style="display:inline-block; font-size:0.65rem; background-color:#f43f5e; color:white; padding:1px 4px; border-radius:3px; margin-right:3px;">인문</span>`
+                            ? `<span class="badge-mini badge-human">인문</span>`
                             : '';
 
                     const minStr = row['수능 최저학력기준'] || '';
                     const hasMin = minStr && minStr !== '없음';
 
                     const minBadge = hasMin
-                        ? `<span style="display:inline-block; font-size:0.65rem; background-color:#f59e0b; color:white; padding:1px 4px; border-radius:3px;">최저</span>`
+                        ? `<span class="badge-mini badge-min">최저</span>`
                         : '';
 
                     const langDisplay = rowAnsType
                         ? `${rowAnsType}${rowAnsLength ? ' (' + rowAnsLength + ')' : ''}${rowPresent ? ' · ' + rowPresent : ''}`
                         : rowPresent;
 
+                    const scoreObj = getScoreForUniv(row['대학명'], row['모집 및 세부 학과']);
+                    const scoreTag = scoreObj
+                        ? `<a href="scores.html?univ=${encodeURIComponent(row['대학명'])}" target="_blank" onclick="event.stopPropagation();" class="card-score-link" title="클릭하여 ${row['대학명']} 논술 합격선 분석 서브페이지로 이동">📊 ${scoreObj.환산점수.toFixed(1)}점</a>`
+                        : '';
+
                     html += `
                         <div class="timetable-card ${isOn ? '' : 'off'} ${isOverlap ? 'overlap' : ''}" 
-                             style="--stack-idx: ${i}; z-index: ${cards.length - i}; position: relative;"
-                             onclick="toggleCardOnOff(${rowIdx})">
-                            <div class="card-header">
-                                <span class="card-univ">${row['대학명']}</span>
+                             onclick="toggleCardOnOff(${rowIdx})"
+                             title="${isOn ? '클릭하여 OFF 전환' : '클릭하여 ON 전환'}">
+                            <div class="card-row-top">
+                                <div class="card-univ-block">
+                                    <span class="card-univ">${row['대학명']}</span>
+                                    <span class="card-badges">${typeBadge}${minBadge}${scoreTag}</span>
+                                </div>
                                 <span class="card-toggle">${isOn ? 'ON' : 'OFF'}</span>
                             </div>
-                            <div class="card-track">${row['모집 및 세부 학과'] || ''}</div>
-                            <div class="card-time">🕐 ${row['고사 시간'] || '시간 미정'}</div>
-                            <div style="margin-top:0.25rem;">${typeBadge}${minBadge}</div>
-                            ${hasMath ? `<div class="card-print-detail" style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">📐 <strong>수리:</strong> ${mathRaw || mathNorm}</div>` : ''}
-                            ${langDisplay ? `<div class="card-print-detail" style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">📝 <strong>언어:</strong> ${langDisplay}</div>` : ''}
+                            <div class="card-track-text" title="${row['모집 및 세부 학과'] || ''}">${row['모집 및 세부 학과'] || ''}</div>
+                            <div class="card-time-text">🕐 ${row['고사 시간'] || '시간 미정'}</div>
+                            ${hasMath ? `<div class="card-print-detail" style="display:none;">📐 <strong>수리:</strong> ${mathRaw || mathNorm}</div>` : ''}
+                            ${langDisplay ? `<div class="card-print-detail" style="display:none;">📝 <strong>언어:</strong> ${langDisplay}</div>` : ''}
                         </div>
                     `;
                 });
@@ -1302,6 +1343,11 @@ function renderSummary() {
                     const rowIdx = row['_rowIdx'];
                     const isOn = isCardOn(row);
 
+                    const sObj = getScoreForUniv(row['대학명'], row['모집 및 세부 학과']);
+                    const sLink = sObj 
+                        ? `<br><a href="scores.html?univ=${encodeURIComponent(row['대학명'])}" target="_blank" onclick="event.stopPropagation();" class="summary-score-tag" title="논술 합격선 분석 상세 보기 (100점환산: ${sObj.환산점수.toFixed(1)}점)">📊 ${sObj.환산점수.toFixed(1)}점</a>`
+                        : '';
+
                     return `
                         <tr draggable="true" data-key="${uKey}" class="${isOn ? '' : 'summary-row-off'}" style="${isOn ? '' : 'opacity: 0.55; background-color: #f8fafc;'}">
                             <td style="text-align:center;" class="no-drag-click">
@@ -1313,7 +1359,7 @@ function renderSummary() {
                                         title="제거"
                                         style="margin-left:2px; width:18px; height:18px; border-radius:50%; border:none; background:rgba(190,58,99,0.7); color:#fff; font-size:0.65rem; font-weight:900; cursor:pointer; line-height:1; display:inline-flex; align-items:center; justify-content:center; padding:0; vertical-align:middle;">×</button>
                             </td>
-                            <td><strong>${row['대학명']}</strong></td>
+                            <td><strong>${row['대학명']}</strong>${sLink}</td>
                             <td style="font-size:0.78rem; white-space:normal; word-break:break-word; min-width:90px;">${trackBadges}<span style="color:var(--text-muted);">${row['모집 및 세부 학과'] || '-'}</span></td>
                             <td style="text-align:left; font-weight:600; white-space:nowrap;">${row['고사 일자'] || '미정'}</td>
                             <td style="text-align:left; font-size:0.78rem; white-space:normal; word-break:break-word; min-width:70px;">${row['고사 시간'] || '미정'}</td>
@@ -1511,6 +1557,8 @@ window.toggleScheduleImage = toggleScheduleImage;
 window.showWelcomeModal = showWelcomeModal;
 window.closeWelcomeModal = closeWelcomeModal;
 window.toggleGuideCard = toggleGuideCard;
+window.captureTimetable = captureTimetable;
+window.captureTimetableVertical = captureTimetableVertical;
 
 function toggleScheduleImage() {
     const content = document.getElementById('schedule-image-content');
@@ -1566,10 +1614,297 @@ function openSecretPdf() {
     window.open('300.pdf', '_blank');
 }
 
+
 function openShortPdf() {
     window.open('short.pdf', '_blank');
 }
 
+// ===== 🎨 캡처 이미지 드로잉 & 메모 편집기 로직 =====
+const editorState = {
+    isOpen: false,
+    currentTool: 'pen', // 'pen' | 'highlighter' | 'eraser'
+    currentColor: '#ef4444',
+    currentWidth: 3,
+    strokes: [], // Array of { tool, color, width, alpha, points: [{x,y}, ...] }
+    isDrawing: false,
+    currentStroke: null,
+    baseCanvas: null,
+    overlayCanvas: null,
+    overlayCtx: null,
+    fileNamePrefix: '나의_논술_모의계획표'
+};
+
+function initEditorCanvas() {
+    editorState.baseCanvas = document.getElementById('base-capture-canvas');
+    editorState.overlayCanvas = document.getElementById('drawing-overlay-canvas');
+    if (!editorState.overlayCanvas) return;
+    editorState.overlayCtx = editorState.overlayCanvas.getContext('2d');
+
+    // 이벤트 리스너 (마우스 & 터치/펜 지원)
+    const overlay = editorState.overlayCanvas;
+    overlay.onmousedown = startDrawing;
+    overlay.onmousemove = drawMove;
+    overlay.onmouseup = stopDrawing;
+    overlay.onmouseleave = stopDrawing;
+
+    overlay.ontouchstart = (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        overlay.dispatchEvent(mouseEvent);
+    };
+    overlay.ontouchmove = (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        overlay.dispatchEvent(mouseEvent);
+    };
+    overlay.ontouchend = (e) => {
+        e.preventDefault();
+        const mouseEvent = new MouseEvent('mouseup', {});
+        overlay.dispatchEvent(mouseEvent);
+    };
+}
+
+function getCanvasCoordinates(e) {
+    const rect = editorState.overlayCanvas.getBoundingClientRect();
+    const scaleX = editorState.overlayCanvas.width / rect.width;
+    const scaleY = editorState.overlayCanvas.height / rect.height;
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+}
+
+function startDrawing(e) {
+    const pt = getCanvasCoordinates(e);
+
+    if (editorState.currentTool === 'eraser') {
+        // 획 지우개: 클릭한 지점 근처의 획(Stroke) 전체 삭제
+        eraseStrokeAtPoint(pt);
+        editorState.isDrawing = true; // 드래그하면서 여러 획 지우기 가능
+        return;
+    }
+
+    editorState.isDrawing = true;
+    const alpha = editorState.currentTool === 'highlighter' ? 0.35 : 1.0;
+    const width = editorState.currentTool === 'highlighter' ? editorState.currentWidth * 3.5 : editorState.currentWidth;
+
+    editorState.currentStroke = {
+        tool: editorState.currentTool,
+        color: editorState.currentColor,
+        width: width,
+        alpha: alpha,
+        points: [pt]
+    };
+
+    renderAllStrokes();
+}
+
+function drawMove(e) {
+    if (!editorState.isDrawing) return;
+    const pt = getCanvasCoordinates(e);
+
+    if (editorState.currentTool === 'eraser') {
+        eraseStrokeAtPoint(pt);
+        return;
+    }
+
+    if (editorState.currentStroke) {
+        editorState.currentStroke.points.push(pt);
+        renderAllStrokes(editorState.currentStroke);
+    }
+}
+
+function stopDrawing() {
+    if (!editorState.isDrawing) return;
+    editorState.isDrawing = false;
+    if (editorState.currentStroke && editorState.currentStroke.points.length > 0) {
+        editorState.strokes.push(editorState.currentStroke);
+    }
+    editorState.currentStroke = null;
+    renderAllStrokes();
+}
+
+// 획 지우개: 점(pt)과 선분들 사이의 최단거리 계산하여 획 단위 삭제
+function eraseStrokeAtPoint(pt) {
+    const threshold = 16; // 지우개 감지 반경
+    let deleted = false;
+
+    for (let i = editorState.strokes.length - 1; i >= 0; i--) {
+        const stroke = editorState.strokes[i];
+        const hit = stroke.points.some((p, pIdx) => {
+            if (pIdx === 0) {
+                const dist = Math.hypot(p.x - pt.x, p.y - pt.y);
+                return dist <= threshold + stroke.width / 2;
+            }
+            const prev = stroke.points[pIdx - 1];
+            return distToSegment(pt, prev, p) <= threshold + stroke.width / 2;
+        });
+
+        if (hit) {
+            editorState.strokes.splice(i, 1);
+            deleted = true;
+            break; // 한 번에 한 획씩 자연스럽게 삭제
+        }
+    }
+
+    if (deleted) {
+        renderAllStrokes();
+    }
+}
+
+function distToSegment(p, v, w) {
+    const l2 = (v.x - w.x) * (v.x - w.x) + (v.y - w.y) * (v.y - w.y);
+    if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+}
+
+// 오버레이 캔버스에 모든 획 다시 그리기
+function renderAllStrokes(liveStroke = null) {
+    const ctx = editorState.overlayCtx;
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, editorState.overlayCanvas.width, editorState.overlayCanvas.height);
+
+    const drawList = [...editorState.strokes];
+    if (liveStroke) drawList.push(liveStroke);
+
+    drawList.forEach(stroke => {
+        if (!stroke.points || stroke.points.length === 0) return;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = stroke.color;
+        ctx.lineWidth = stroke.width;
+        ctx.lineCap = stroke.tool === 'highlighter' ? 'square' : 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = stroke.alpha;
+
+        if (stroke.points.length === 1) {
+            ctx.fillStyle = stroke.color;
+            ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+            for (let i = 1; i < stroke.points.length; i++) {
+                ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            ctx.stroke();
+        }
+        ctx.restore();
+    });
+}
+
+function openCaptureEditorModal(capturedCanvas, fileNamePrefix) {
+    const modal = document.getElementById('capture-editor-modal');
+    if (!modal) return;
+
+    initEditorCanvas();
+    editorState.fileNamePrefix = fileNamePrefix || '나의_논술_모의계획표';
+    editorState.strokes = []; // 메모 초기화
+
+    // 베이스 캔버스에 캡처 이미지 세팅
+    const baseCanvas = editorState.baseCanvas;
+    const overlayCanvas = editorState.overlayCanvas;
+    baseCanvas.width = capturedCanvas.width;
+    baseCanvas.height = capturedCanvas.height;
+    const baseCtx = baseCanvas.getContext('2d');
+    baseCtx.drawImage(capturedCanvas, 0, 0);
+
+    // 오버레이 드로잉 캔버스 크기 일치
+    overlayCanvas.width = capturedCanvas.width;
+    overlayCanvas.height = capturedCanvas.height;
+    overlayCanvas.style.width = '100%';
+    overlayCanvas.style.height = '100%';
+
+    // 모달 표시
+    modal.style.display = 'flex';
+    setDrawingTool('pen');
+    renderAllStrokes();
+}
+
+function closeCaptureEditorModal() {
+    const modal = document.getElementById('capture-editor-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function setDrawingTool(tool) {
+    editorState.currentTool = tool;
+    document.querySelectorAll('.editor-tool-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`tool-${tool}`)?.classList.add('active');
+
+    const overlay = editorState.overlayCanvas;
+    if (overlay) {
+        overlay.style.cursor = tool === 'eraser' ? 'cell' : 'crosshair';
+    }
+}
+
+function setDrawingColor(color, el) {
+    editorState.currentColor = color;
+    document.querySelectorAll('#editor-colors .color-dot').forEach(d => d.classList.remove('active'));
+    if (el) el.classList.add('active');
+    if (editorState.currentTool === 'eraser') setDrawingTool('pen');
+}
+
+function setDrawingWidth(w, el) {
+    editorState.currentWidth = w;
+    document.querySelectorAll('#editor-sizes .size-dot-btn').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+}
+
+function undoDrawingStroke() {
+    if (editorState.strokes.length > 0) {
+        editorState.strokes.pop();
+        renderAllStrokes();
+    }
+}
+
+function clearAllDrawingStrokes() {
+    if (editorState.strokes.length === 0) return;
+    if (confirm('작성한 모든 메모 및 그림을 지우시겠습니까?')) {
+        editorState.strokes = [];
+        renderAllStrokes();
+    }
+}
+
+function saveFinalEditedImage() {
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = editorState.baseCanvas.width;
+    finalCanvas.height = editorState.baseCanvas.height;
+    const ctx = finalCanvas.getContext('2d');
+
+    // 1. 캡처 이미지 그리기
+    ctx.drawImage(editorState.baseCanvas, 0, 0);
+
+    // 2. 그 위에 드로잉 오버레이 합성
+    ctx.drawImage(editorState.overlayCanvas, 0, 0);
+
+    // 3. 다운로드
+    const link = document.createElement('a');
+    link.download = `${editorState.fileNamePrefix}_메모완성.png`;
+    link.href = finalCanvas.toDataURL('image/png');
+    link.click();
+}
+
+window.openCaptureEditorModal = openCaptureEditorModal;
+window.closeCaptureEditorModal = closeCaptureEditorModal;
+window.setDrawingTool = setDrawingTool;
+window.setDrawingColor = setDrawingColor;
+window.setDrawingWidth = setDrawingWidth;
+window.undoDrawingStroke = undoDrawingStroke;
+window.clearAllDrawingStrokes = clearAllDrawingStrokes;
+window.saveFinalEditedImage = saveFinalEditedImage;
+
+// ===== 가로 / 세로 캡처 실행 함수 (편집기 모달 연동) =====
 function captureTimetable() {
     const area = document.getElementById('capture-area');
     const container = document.getElementById('capture-flex-container');
@@ -1578,10 +1913,10 @@ function captureTimetable() {
 
     if (!area || !container || !leftPanel || !rightPanel) return;
 
-    // [0] OFF 카드 및 요약표 OFF 행 임시 숨기기 (캡처 시 ON된 것들만 보이게)
+    // [0] OFF 카드 및 요약표 OFF 행 임시 숨기기
     const offCards = area.querySelectorAll('.timetable-card.off');
     offCards.forEach(card => { card.setAttribute('data-hidden-for-capture', 'true'); card.style.display = 'none'; });
-    
+
     const offRows = area.querySelectorAll('tr.summary-row-off');
     offRows.forEach(row => { row.setAttribute('data-hidden-for-capture', 'true'); row.style.display = 'none'; });
 
@@ -1634,7 +1969,6 @@ function captureTimetable() {
 
     // 캡처 완료 시 원래 상태로 복원
     const restoreStyles = () => {
-        // OFF 요소 복원
         offCards.forEach(card => { card.removeAttribute('data-hidden-for-capture'); card.style.display = ''; });
         offRows.forEach(row => { row.removeAttribute('data-hidden-for-capture'); row.style.display = ''; });
         if (timetableWrapper) {
@@ -1660,7 +1994,7 @@ function captureTimetable() {
         area.style.width = originalAreaWidth;
     };
 
-    // html2canvas 실행
+    // html2canvas 실행 후 편집기 모달 오픈
     html2canvas(area, {
         backgroundColor: '#ffffff',
         useCORS: true,
@@ -1672,14 +2006,11 @@ function captureTimetable() {
         windowHeight: area.scrollHeight + 100
     }).then(canvas => {
         restoreStyles();
-        const link = document.createElement('a');
-        link.download = '나의_논술_모의계획표_가로.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        openCaptureEditorModal(canvas, '나의_논술_모의계획표_가로');
     }).catch(err => {
         console.error('이미지 캡처 오류:', err);
         restoreStyles();
-        alert('이미지 저장 중 오류가 발생했습니다. 브라우저 호환성을 확인해 주세요.');
+        alert('이미지 생성 중 오류가 발생했습니다. 브라우저 호환성을 확인해 주세요.');
     });
 }
 
@@ -1775,7 +2106,7 @@ function captureTimetableVertical() {
         area.style.width = originalAreaWidth;
     };
 
-    // html2canvas 실행
+    // html2canvas 실행 후 편집기 모달 오픈
     html2canvas(area, {
         backgroundColor: '#ffffff',
         useCORS: true,
@@ -1787,14 +2118,11 @@ function captureTimetableVertical() {
         windowHeight: area.scrollHeight + 100
     }).then(canvas => {
         restoreStyles();
-        const link = document.createElement('a');
-        link.download = '나의_논술_모의계획표_세로.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        openCaptureEditorModal(canvas, '나의_논술_모의계획표_세로');
     }).catch(err => {
         console.error('이미지 캡처 오류:', err);
         restoreStyles();
-        alert('이미지 저장 중 오류가 발생했습니다. 브라우저 호환성을 확인해 주세요.');
+        alert('이미지 생성 중 오류가 발생했습니다. 브라우저 호환성을 확인해 주세요.');
     });
 }
 

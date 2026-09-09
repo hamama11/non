@@ -12,7 +12,7 @@
 <br/>
 
 [![Made by SM](https://img.shields.io/badge/Made%20by-숙명여고-F6C9D6?style=for-the-badge&labelColor=0B5D45&color=0B5D45)]
-[![Version](https://img.shields.io/badge/Version-v4.0-F6C9D6?style=for-the-badge&labelColor=be3a63&color=be3a63)]
+[![Version](https://img.shields.io/badge/Version-v4.5-F6C9D6?style=for-the-badge&labelColor=be3a63&color=be3a63)]
 [![Target](https://img.shields.io/badge/대상-2027학년도%20논술%20수험생-F6C9D6?style=for-the-badge&labelColor=4f46e5&color=4f46e5)]
 </div>
 
@@ -26,6 +26,7 @@
 
 | 버전 | 주요 업데이트 |
 |---|---|
+| **v4.5** | **📊 논술 합격 점수 분석기** 신설 · **✏️ 캡처 드로잉/메모 편집기(펜·형광펜·획지우개)** 탑재 · **2027 data.csv 최신화** · **시간표 카드 컴팩트 개편** |
 | **v4** | 수리 가중치 배열 추가 및 계산 체계 고도화 |
 | **v3** | 약술형 포함 DB 전면 통합 · PNG 이미지 캡처 · 드래그 순서 조정 |
 | **v2** | 인쇄 기능 탑재 · Transpose 캘린더 시각화 |

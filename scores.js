@@ -1883,6 +1883,35 @@ window.closeMathModal = function(e) {
     if (modal) modal.style.display = 'none';
 };
 
+// ── 설명서(합격선 코멘트) 열기/닫기 토글 ──────────────────────────────────────────
+window.toggleStrategyGuide = function() {
+    state.strategyGuideOpen = !state.strategyGuideOpen;
+    const guideCard = document.getElementById('strategy-guide-card');
+    const dockGuideBtn = document.getElementById('dock-guide-btn');
+    const headerBtn = document.getElementById('strategy-toggle-btn');
+
+    if (guideCard) {
+        guideCard.style.display = state.strategyGuideOpen ? 'block' : 'none';
+        if (state.strategyGuideOpen) {
+            guideCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    if (dockGuideBtn) {
+        if (state.strategyGuideOpen) {
+            dockGuideBtn.classList.add('active');
+        } else {
+            dockGuideBtn.classList.remove('active');
+        }
+    }
+
+    if (headerBtn) {
+        headerBtn.innerHTML = state.strategyGuideOpen 
+            ? '💡 합격선 데이터 해석 코멘트 ▲' 
+            : '💡 합격선 데이터 해석 코멘트 ▼';
+    }
+};
+
 // ── 통계 & 이스케이프 유틸 ────────────────────────────────────────────────────
 function calcStats(arr) {
     if (!arr || !arr.length) return null;

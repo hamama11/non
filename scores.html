@@ -29,13 +29,6 @@
                 <span class="mini-metric-item">평균 합격선: <strong id="metric-avg-score" style="color:#FDE047; font-weight:800;">-</strong></span>
                 <span class="mini-metric-item">대상 대학: <strong id="metric-univ-count" style="color:#F6C9D6; font-weight:800;">-</strong></span>
             </div>
-            <button class="guide-accordion-btn" onclick="toggleStrategyGuide()" id="strategy-toggle-btn">
-                💡 합격선 데이터 해석 코멘트 ▼
-            </button>
-            <a href="index.html" class="nav-back-btn">
-                <span>📅 시간표 설계기</span>
-                <span>→</span>
-            </a>
         </div>
     </header>
 
@@ -470,19 +463,27 @@
     </div>
 </div>
 
-<!-- ── Floating Action Group (맨 위로, 맨 아래로, 시간표 설계기) ────────── -->
-<div class="floating-action-group">
-    <button class="floating-scroll-btn" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" title="맨 위로 바로가기">
-        ▲ 맨위로
+<!-- ── Right Floating Dock (설명서, 사이트 전환, 위/아래 통합 내비게이션 바) ── -->
+<div class="right-floating-dock" id="right-floating-dock">
+    <button class="dock-btn" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" title="맨 위로 바로가기" id="dock-btn-top">
+        <span class="dock-icon">▲</span>
+        <span class="dock-label">맨위로</span>
     </button>
-    <button class="floating-scroll-btn" onclick="window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })" title="맨 아래로 바로가기">
-        ▼ 맨아래로
+    <div class="dock-divider"></div>
+    <button class="dock-btn" onclick="toggleStrategyGuide()" title="데이터 해석 코멘트 열기/닫기" id="dock-guide-btn">
+        <span class="dock-icon">💡</span>
+        <span class="dock-label">설명서</span>
     </button>
-    <a href="index.html" class="floating-site-btn" title="논술 시간표 설계기 메인으로 이동">
-        <span class="floating-btn-icon">📅</span>
-        <span class="floating-btn-text">시간표 설계기</span>
-        <span>→</span>
+    <div class="dock-divider"></div>
+    <a href="index.html" class="dock-btn dock-btn-link" title="논술 시간표 설계기로 이동">
+        <span class="dock-icon">📅</span>
+        <span class="dock-label">시간표</span>
     </a>
+    <div class="dock-divider"></div>
+    <button class="dock-btn" onclick="window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })" title="맨 아래로 바로가기" id="dock-btn-bottom">
+        <span class="dock-icon">▼</span>
+        <span class="dock-label">맨아래로</span>
+    </button>
 </div>
 
 </body>
