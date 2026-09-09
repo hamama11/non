@@ -1,189 +1,489 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대학별 논술 합격선(점수) 분석 대시보드 - SM Smart Match</title>
-    <meta name="description" content="2027학년도 주요 대학 논술 전형 합격점수 및 100점 만점 환산점수를 조건별로 필터링하고 시각적으로 비교 분석합니다.">
+    <title>대학별 논술 합격선 분석 대시보드 - SM Smart Match</title>
+    <meta name="description" content="2027학년도 주요 대학 논술 합격점수, 70% Cut, 수능 수학 백분위, 계열별 비교 및 대학별/학과별 심층 분석">
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="scores.css">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="scores.js"></script>
 </head>
-
 <body>
-    <div class="app-wrapper">
-        <!-- Header -->
-        <header class="scores-header">
+<div class="app-wrapper">
+
+    <!-- ── Header (컴팩트 헤더) ────────────────────────────────────── -->
+    <header class="scores-header">
+        <div class="header-left-group">
+            <h1>📊 대학별 논술 합격선 대시보드
+                <span class="badge-tag" style="background:#F6C9D6; color:#0B5D45; font-size:0.75rem; font-weight:800;">SM Smart Match</span>
+                <span class="badge-tag" id="header-mode-badge" style="background:rgba(255,255,255,0.2); color:#FFFFFF; border:1px solid rgba(246,201,214,0.4);">전국 대학 탐색 모드</span>
+            </h1>
+            <span class="header-desc" id="header-mode-desc">대학명 검색 시 [대학 내부 심층 분석] · 학과/계열 검색 시 [전국 대학별 비교]</span>
+        </div>
+
+        <div class="header-right-group">
+            <div class="header-mini-metrics">
+                <span class="mini-metric-item">선택 모집단위: <strong id="metric-total-count">-</strong></span>
+                <span class="mini-metric-item">평균 합격선: <strong id="metric-avg-score" style="color:#FDE047; font-weight:800;">-</strong></span>
+                <span class="mini-metric-item">대상 대학: <strong id="metric-univ-count" style="color:#F6C9D6; font-weight:800;">-</strong></span>
+            </div>
+            <button class="guide-accordion-btn" onclick="toggleStrategyGuide()" id="strategy-toggle-btn">
+                💡 합격선 데이터 해석 코멘트 ▼
+            </button>
+            <a href="index.html" class="nav-back-btn">
+                <span>📅 시간표 설계기</span>
+                <span>→</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- ── 1. 논술 합격선 데이터 해석 코멘트 (접이식 컴팩트) ────────────────── -->
+    <section class="strategy-guide-container" id="strategy-guide-card">
+        <div class="strategy-guide-header">
+            <div class="strategy-guide-title">
+                <span>💡 논술 합격선 데이터 해석 코멘트</span>
+                <span class="badge-tag" style="background:#F6C9D6; color:#0B5D45;">데이터 해석 가이드</span>
+            </div>
+            <button class="guide-close-icon" onclick="toggleStrategyGuide()" title="접기">×</button>
+        </div>
+
+        <div class="strategy-cards-grid">
+            <div class="strategy-card">
+                <div class="strategy-card-badge" style="background:#EFF6FF; color:#1E40AF;">고득점 형성군 (80~95점선)</div>
+                <h4>📈 점수대가 높은 대학</h4>
+                <ul class="strategy-list">
+                    <li><strong>문항 특징</strong>: 약술형(EBS 연계) 또는 교과 개념 중심 단답/계산형 출제</li>
+                    <li><strong>해석 가이드</strong>: 시험 난이도가 평이하여 <strong>사소한 계산 실수나 감점이 치명적</strong>입니다. 1~2점 차이로 합불이 갈리므로 <strong>'완벽한 실수 방지'</strong>가 최우선 합격 요소로 해석할 수 있습니다.</li>
+                </ul>
+            </div>
+
+            <div class="strategy-card">
+                <div class="strategy-card-badge" style="background:#FEF3C7; color:#92400E;">저득점 형성군 (30~55점선)</div>
+                <h4>📉 점수대가 낮은 대학</h4>
+                <ul class="strategy-list">
+                    <li><strong>문항 특징</strong>: 고난도 수리 증명 또는 전통 심층 서술형 출제 (지거국/상위권)</li>
+                    <li><strong>해석 가이드</strong>: 완벽한 풀이보다 <strong>단계별 논리 전개와 부분점수 확보</strong>가 결정적입니다. 체감 난이도에 위축되지 않고 접근 가능한 소문항을 확실히 공략하는 것이 관건으로 해석할 수 있습니다.</li>
+                </ul>
+            </div>
+
+            <div class="strategy-card">
+                <div class="strategy-card-badge" style="background:#FCE7F3; color:#9D174D;">격차/스나이핑군 (하단 컷이 긴 대학)</div>
+                <h4>🎯 꼬리가 긴 대학</h4>
+                <ul class="strategy-list">
+                    <li><strong>문항 특징</strong>: 높은 수능최저 기준 또는 활발한 충원합격(추합) 발생</li>
+                    <li><strong>해석 가이드</strong>: 70% Cut 대비 최저점(커트라인)이 크게 내려간 곳은 <strong>수능최저 통과 시 실질 경쟁률이 급감</strong>하여 평소 논술 점수 대비 역전 합격(스나이핑) 기회가 발생하는 구간으로 해석할 수 있습니다.</li>
+                </ul>
+            </div>
+
+            <div class="strategy-card">
+                <div class="strategy-card-badge" style="background:#F3E8FF; color:#6B21A8;">틈새 스펙트럼 (최고-최저 격차)</div>
+                <h4>📊 최고점-최저점 격차 큰 대학</h4>
+                <ul class="strategy-list">
+                    <li><strong>데이터 특징</strong>: 한양대(16.9점), 가천대(14.7점) 등 학과 간 점수 스펙트럼이 넓은 대학</li>
+                    <li><strong>해석 가이드</strong>: 격차가 12점 이상으로 큰 대학은 <strong>'대학 간판을 노리는 비인기/틈새 학과 스나이핑'</strong> 전략이 매우 유효합니다. 반면 격차가 좁은 대학(3~5점)은 학과 눈치작전보다 당일 실력과 실수 방지가 결정적입니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 출처 표시, 미공개 대학 안내, 참고사항 푸터 -->
+        <div class="strategy-guide-footer" style="margin-top:0.85rem; padding-top:0.65rem; border-top:1px dashed #E2E8F0; font-size:0.75rem; color:#64748B; display:flex; flex-direction:column; gap:0.25rem;">
             <div>
-                <h1>
-                    📊 대학별 논술 합격선 분석 
-                    <span class="badge-tag">점수 데이터 탐색기</span>
-                </h1>
-                <p>대학별 / 계열별 합격점수(100점 만점 환산) 비교 및 상세 학과 분석</p>
+                <strong>📌 출처:</strong> 대학어디가(adiga.kr) 및 각 대학별 입학처 공식 발표 입시결과 공시자료
             </div>
-            <div>
-                <a href="index.html" class="nav-back-btn">
-                    <span>📅 논술 시간표 설계기로 돌아가기</span>
-                    <span>→</span>
-                </a>
+            <div style="color:#94A3B8; font-size:0.72rem;">
+                * 합격점수 미공개 대학: 연세대, 성균관대, 서강대, 고려대, 이화여대, 서울시립대(일부) 등은 입학처 정책상 논술 점수를 비공개하여 목록에서 제외되어 있습니다.
             </div>
-        </header>
+            <div style="color:#64748B; font-size:0.72rem;">
+                ※ 위 내용은 수험생의 지원 전략 수립을 돕기 위한 <strong>참고사항일 뿐</strong>이며, 당해 연도 출제 난이도 및 수능최저 충족률에 따라 실질 합격선은 변동될 수 있습니다.
+            </div>
+        </div>
+    </section>
 
-        <!-- Summary Metrics -->
-        <section class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-title">선택된 학과(모집단위) 수</div>
-                <div class="metric-value" id="metric-total-count">-</div>
-                <div class="metric-sub">조건 만족 모집단위</div>
+    <!-- ── 2. 상단 가로형 통합 컨트롤 패널 (검색 + 빠른선택 + 조건필터) ── -->
+    <section class="top-control-panel">
+        
+        <!-- Row 1: 검색바 + 수능최저 + 빠른선택 + 초기화 -->
+        <div class="control-row control-row-main">
+            <div class="search-box-unified">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="search-input-unified"
+                       placeholder="대학명 또는 학과/계열 검색 (예: 가천대, 한양대, 경영, 컴퓨터, 간호, 의예)..."
+                       oninput="handleSearch(this.value)">
+                <button class="search-clear-btn" id="search-clear-btn" onclick="clearSearch()" title="검색 지우기" style="display:none;">✕</button>
             </div>
-            <div class="metric-card">
-                <div class="metric-title">필터링 학과 평균 합격선 (100점 환산)</div>
-                <div class="metric-value" id="metric-avg-score" style="color: #0F5A43;">-</div>
-                <div class="metric-sub">선택된 모집단위 전체 평균</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">최고 합격선 학과 (100점 환산)</div>
-                <div class="metric-value" id="metric-max-score" style="color: #C2547A; font-size: 1.25rem;">-</div>
-                <div class="metric-sub">가장 높은 100점 환산점수</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">분석 대상 대학 수</div>
-                <div class="metric-value" id="metric-univ-count" style="color: #4F46E5;">-</div>
-                <div class="metric-sub">선택된 조건 내 포함 대학</div>
-            </div>
-        </section>
 
-        <!-- Main Dashboard Layout -->
-        <main class="dashboard-layout">
-            <!-- Left Sidebar Filter -->
-            <aside class="filter-sidebar">
-                <div class="filter-header">
-                    <h2>🎯 다중 맞춤 필터</h2>
-                    <button class="btn-reset" onclick="resetAllFilters()">초기화 ↺</button>
+            <!-- 수능최저 유무 필터 버튼 -->
+            <div class="min-filter-bar-unified">
+                <span class="filter-mini-label">수능최저:</span>
+                <button class="min-btn-unified active" id="btn-min-all" onclick="setMinimumFilter('all')">전체</button>
+                <button class="min-btn-unified" id="btn-min-Y" onclick="setMinimumFilter('Y')">최저 있음(Y)</button>
+                <button class="min-btn-unified" id="btn-min-N" onclick="setMinimumFilter('N')">최저 없음(N)</button>
+            </div>
+
+            <!-- 수능수학 표본 토글 -->
+            <label class="filter-chip-mini" id="chip-has-math">
+                <input type="checkbox" id="check-has-math" onchange="toggleHasMathOnly(this.checked)">
+                <span>🔬 수학표본만</span>
+            </label>
+
+            <!-- 초기화 버튼 -->
+            <button class="btn-reset-unified" onclick="resetAllFilters()" title="모든 검색 및 필터 초기화">
+                초기화 ↺
+            </button>
+        </div>
+
+        <!-- Row 2: 빠른 대학/학과 바로가기 칩 -->
+        <div class="control-row control-row-quick">
+            <div class="quick-tags-label-unified">🏢 빠른 선택:</div>
+            <div class="search-quick-tags-unified" id="quick-univ-tags">
+                <!-- JS 생성 -->
+            </div>
+        </div>
+
+        <!-- Row 3: 지역구분 + 계열구분 + 응시유형별 분류 필터 가로바 -->
+        <div class="control-row control-row-filters">
+            <!-- 지역 필터 -->
+            <div class="filter-bar-group">
+                <span class="filter-bar-title">🗺️ 지역:</span>
+                <div class="filter-toggle-all-btns">
+                    <button class="filter-mini-toggle-btn" onclick="toggleAllFilters('region', true)" title="지역 전체 선택">전체</button>
+                    <button class="filter-mini-toggle-btn" onclick="toggleAllFilters('region', false)" title="지역 전체 해제">해제</button>
+                </div>
+                <div class="filter-tags-flex" id="region-filters"></div>
+            </div>
+
+            <div class="filter-divider"></div>
+
+            <!-- 계열 필터 -->
+            <div class="filter-bar-group">
+                <span class="filter-bar-title">🎓 계열:</span>
+                <div class="filter-toggle-all-btns">
+                    <button class="filter-mini-toggle-btn" onclick="toggleAllFilters('field', true)" title="계열 전체 선택">전체</button>
+                    <button class="filter-mini-toggle-btn" onclick="toggleAllFilters('field', false)" title="계열 전체 해제">해제</button>
+                </div>
+                <div class="filter-tags-flex" id="field-filters"></div>
+            </div>
+
+            <div class="filter-divider"></div>
+
+            <!-- 응시유형별 분류 탭 -->
+            <div class="filter-bar-group">
+                <span class="filter-bar-title">🗂️ 응시유형별 분류:</span>
+                <div class="exam-tab-flex" id="exam-tab-bar">
+                    <!-- JS 동적 생성 -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Main Dashboard Layout (Full Width) ──────────────────────── -->
+    <main class="dashboard-layout-full">
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             MODE A-1: [단일 대학 검색 모드] - 대학 내부 학과 심층 분석실
+             우선순위: 요약/틈새 분석 -> 대학 내 학과별 그래프 -> 대학 내 학과별 상세 표
+             ══════════════════════════════════════════════════════════════════ -->
+        <div id="search-mode-container" style="display:none; flex-direction:column; gap:1.2rem;">
+            
+            <!-- 1. 대학 내부 심층 분석 배너 -->
+            <div class="univ-focus-banner" id="univ-focus-banner">
+                <!-- JS 동적 생성 -->
+            </div>
+
+            <!-- 2. [요약 내용]: 시험 1 vs 시험 2 평균선, 대학 평균 대비 틈새 학과 -->
+            <div class="univ-insight-section" id="univ-insight-container">
+                <!-- JS 동적 생성 -->
+            </div>
+
+            <!-- 3. [논술점수 그래프]: 학과별 환산점수 바차트 + 수능수학 백분위 차트 -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title">📊 대학 내 학과별 100점 환산점수 및 70% Cut 비교</h3>
+                        <span class="chart-hint">시험 종류별 테마 색상 적용</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="searchDeptScoreChart"></canvas>
+                    </div>
                 </div>
 
-                <!-- 검색창 -->
-                <div class="filter-group">
-                    <div class="filter-group-title">
-                        <span>🔍 대학 / 학과명 검색</span>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title">🔬 대학 내 수능 수학 백분위 실측 비교 (합격 vs 불합격)</h3>
+                        <span class="chart-hint">학과별 수능 수학 중앙값</span>
                     </div>
-                    <div class="search-box">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="search-input" class="search-input" placeholder="대학명 또는 학과명 입력..." oninput="handleSearch(this.value)">
+                    <div class="chart-wrapper">
+                        <canvas id="searchDeptMathChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. [표]: 대학 내 학과별 논술점수 및 백분위 현황 테이블 -->
+            <div class="table-section" id="table-card">
+                <div class="table-header-bar">
+                    <div class="table-title">
+                        <span id="search-table-title">📋 대학 내부 학과별 논술 점수 & 수능 백분위 상세 현황</span>
+                        <span class="badge-tag" id="table-count-badge">총 0건</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">
+                        * 헤더 클릭 시 정렬 (기본: 100점환산 내림차순)
                     </div>
                 </div>
 
-                <!-- 지역구분 다중선택 필터 -->
-                <div class="filter-group">
-                    <div class="filter-group-title">
-                        <span>📍 지역구분 (다중선택)</span>
-                        <div>
-                            <button class="filter-select-all-btn" onclick="toggleAllFilters('region', true)">전체선택</button>
-                            <span style="color: #D1D5DB; font-size: 0.7rem;">|</span>
-                            <button class="filter-select-all-btn" onclick="toggleAllFilters('region', false)">해제</button>
-                        </div>
+                <div class="table-container">
+                    <table class="scores-table">
+                        <thead>
+                            <tr>
+                                <th id="th-대학명" onclick="handleSort('대학명')">대학명 <span class="sort-icon">⇅</span></th>
+                                <th id="th-계열분류" onclick="handleSort('계열분류')">시험구분 <span class="sort-icon">⇅</span></th>
+                                <th id="th-계열구분" onclick="handleSort('계열구분')">계열 <span class="sort-icon">⇅</span></th>
+                                <th id="th-학과명" onclick="handleSort('학과명')">학과명 <span class="sort-icon">⇅</span></th>
+                                <th id="th-최저여부" onclick="handleSort('최저여부')">최저 <span class="sort-icon">⇅</span></th>
+                                <th id="th-논술점수" onclick="handleSort('논술점수')" style="text-align:right;">원점수 <span class="sort-icon">⇅</span></th>
+                                <th id="th-환산점수" class="active-sort" onclick="handleSort('환산점수')">100점환산 <span class="sort-icon">▼</span></th>
+                                <th>70%Cut / 최저선</th>
+                                <th>수능수학 백분위</th>
+                                <th>출제 라인 성격</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr><td colspan="10" class="no-data-msg">데이터를 불러오는 중입니다...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-container" id="pagination-container"></div>
+            </div>
+
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             MODE A-2: [계열/학과별 검색 모드] - 전국 대학별 해당 학과 합격선 & 최저 비교
+             구성: 전국 대학별 합격선 비교 차트 + 수능최저 유무별 요약 + 핵심 테이블
+             ══════════════════════════════════════════════════════════════════ -->
+        <div id="dept-search-mode-container" style="display:none; flex-direction:column; gap:1.2rem;">
+            
+            <!-- 학과 검색 배너 -->
+            <div class="dept-search-banner" id="dept-search-banner">
+                <!-- JS 동적 생성: "{검색어}" 학과가 개설된 전국 N개 대학 비교 요약 -->
+            </div>
+
+            <!-- 전국 대학별 해당 학과 합격선 비교 차트 + 최저유무 비교 차트 -->
+            <div class="charts-grid">
+                <div class="chart-card" style="flex:1.5;">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title" id="dept-chart-title">📊 전국 대학별 합격선(100점 환산) 및 70% Cut 비교</h3>
+                        <span class="chart-hint">상위 대학 순 정렬</span>
                     </div>
-                    <div class="filter-tags-grid" id="region-filters">
-                        <!-- JS 동적 생성 -->
+                    <div class="chart-wrapper">
+                        <canvas id="deptSearchChart"></canvas>
                     </div>
                 </div>
 
-                <!-- 계열구분 다중선택 필터 -->
-                <div class="filter-group">
-                    <div class="filter-group-title">
-                        <span>🎓 계열구분 (다중선택)</span>
-                        <div>
-                            <button class="filter-select-all-btn" onclick="toggleAllFilters('field', true)">전체선택</button>
-                            <span style="color: #D1D5DB; font-size: 0.7rem;">|</span>
-                            <button class="filter-select-all-btn" onclick="toggleAllFilters('field', false)">해제</button>
-                        </div>
+                <div class="chart-card" style="flex:1;">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title">⚖️ 수능최저 유무별(Y vs N) 합격선 격차</h3>
+                        <span class="chart-hint">최저 있을 때 vs 없을 때</span>
                     </div>
-                    <div class="filter-tags-grid" id="field-filters">
-                        <!-- JS 동적 생성 -->
+                    <div class="chart-wrapper">
+                        <canvas id="deptMinChart"></canvas>
                     </div>
                 </div>
-            </aside>
+            </div>
 
-            <!-- Right Content Area (Charts + Data Table) -->
-            <section class="dashboard-content">
-                <!-- Comparison Bar Charts -->
-                <div class="charts-grid">
-                    <div class="chart-card">
-                        <div class="chart-card-header">
-                            <h3 class="chart-card-title">🏛️ 대학별 평균 합격선 비교</h3>
-                            <span style="font-size: 0.75rem; color: var(--text-muted);">100점 만점 환산 기준</span>
-                        </div>
-                        <div class="chart-wrapper">
-                            <canvas id="univChart"></canvas>
-                        </div>
+            <!-- 전국 대학별 해당 학과/계열 점수 및 최저 현황 테이블 -->
+            <div class="table-section">
+                <div class="table-header-bar">
+                    <div class="table-title">
+                        <span id="dept-table-title">📋 전국 대학별 해당 학과 점수 및 수능최저 현황</span>
+                        <span class="badge-tag" id="dept-table-count-badge">총 0건</span>
                     </div>
-
-                    <div class="chart-card">
-                        <div class="chart-card-header">
-                            <h3 class="chart-card-title">📚 계열별 평균 합격선 비교</h3>
-                            <span style="font-size: 0.75rem; color: var(--text-muted);">100점 만점 환산 기준</span>
-                        </div>
-                        <div class="chart-wrapper">
-                            <canvas id="fieldChart"></canvas>
-                        </div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">
+                        * 대학명 클릭 시 해당 대학 내부 상세 분석실로 이동합니다.
                     </div>
                 </div>
 
-                <!-- Data Table Section -->
-                <div class="table-section" id="table-card">
-                    <div class="table-header-bar">
-                        <div class="table-title">
-                            <span>📋 전체 학과별 논술 점수 상세 현황</span>
-                            <span class="badge-tag" id="table-count-badge">총 0건</span>
-                        </div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">
-                            * 헤더를 클릭하면 해당 열 기준으로 정렬됩니다. (기본: 100점환산 내림차순)
-                        </div>
-                    </div>
+                <div class="table-container">
+                    <table class="scores-table">
+                        <thead>
+                            <tr>
+                                <th onclick="handleSort('대학명')">대학명 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('지역구분')">지역 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('계열구분')">계열 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('학과명')">학과명 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('최저여부')">수능최저 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('환산점수')" class="active-sort">100점환산점수 <span class="sort-icon">▼</span></th>
+                                <th>70% Cut</th>
+                                <th>최저점(컷)</th>
+                                <th>수능수학 백분위</th>
+                                <th>대학 내부로</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dept-table-body">
+                            <tr><td colspan="10" class="no-data-msg">데이터를 불러오는 중입니다...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-container" id="dept-pagination-container"></div>
+            </div>
 
-                    <div class="table-container">
-                        <table class="scores-table">
-                            <thead>
-                                <tr>
-                                    <th id="th-대학명" onclick="handleSort('대학명')">
-                                        대학명 <span class="sort-icon">⇅</span>
-                                    </th>
-                                    <th id="th-지역구분" onclick="handleSort('지역구분')">
-                                        지역구분 <span class="sort-icon">⇅</span>
-                                    </th>
-                                    <th id="th-계열구분" onclick="handleSort('계열구분')">
-                                        계열구분 <span class="sort-icon">⇅</span>
-                                    </th>
-                                    <th id="th-학과명" onclick="handleSort('학과명')">
-                                        학과명 <span class="sort-icon">⇅</span>
-                                    </th>
-                                    <th id="th-논술점수" onclick="handleSort('논술점수')" style="text-align: right;">
-                                        논술점수 <span class="sort-icon">⇅</span>
-                                    </th>
-                                    <th id="th-환산점수" class="active-sort" onclick="handleSort('환산점수')">
-                                        100점만점환산 <span class="sort-icon">▼</span>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-body">
-                                <tr>
-                                    <td colspan="6" class="no-data-msg">데이터를 불러오는 중입니다...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        </div>
 
-                    <!-- Pagination -->
-                    <div class="pagination-container" id="pagination-container">
-                        <!-- JS 렌더링 -->
+        <!-- ══════════════════════════════════════════════════════════════════
+             MODE B: [전국 대학 탐색 모드 (기본/필터 조작)] - 대학 중심 분류
+             ══════════════════════════════════════════════════════════════════ -->
+        <div id="browse-mode-container" style="display:flex; flex-direction:column; gap:1.2rem;">
+
+            <!-- 탐색 뷰 모드 전환 및 안내 바 -->
+            <div class="browse-control-bar">
+                <div class="browse-view-tabs">
+                    <button class="view-mode-btn active" id="btn-view-table" onclick="switchBrowseView('table')">
+                        📋 전체 학과 테이블 뷰 (기본)
+                    </button>
+                    <button class="view-mode-btn" id="btn-view-univ" onclick="switchBrowseView('univ')">
+                        🏛️ 전국 대학별 모아보기 (대학 중심 분류)
+                    </button>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">
+                    💡 특정 대학을 집중 분석하려면 대학명의 <strong>[🏢 상세 →]</strong>를 클릭하세요.
+                </div>
+            </div>
+
+            <!-- 상단 종합 비교 차트 (대학별 평균 합격선 + 계열별 인문/자연) -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title">🏛️ 전국 대학별 평균 합격선 비교</h3>
+                        <span class="chart-hint">100점 만점 환산 평균 (상위 15개교)</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="univChart"></canvas>
                     </div>
                 </div>
-            </section>
-        </main>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title">📚 계열별 인문 vs 자연 시험 평균 비교</h3>
+                        <span class="chart-hint">시험 1(인문) vs 시험 2(자연)</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="fieldChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- B-1: 전체 학과 테이블 뷰 (Default: 기본 표시) -->
+            <div id="browse-table-section" class="table-section" style="display:block;">
+                <div class="table-header-bar">
+                    <div class="table-title">
+                        <span>📋 전체 학과별 논술 점수 현황</span>
+                        <span class="badge-tag" id="browse-table-count-badge">총 0건</span>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="scores-table">
+                        <thead>
+                            <tr>
+                                <th onclick="handleSort('대학명')">대학명 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('계열분류')">시험구분 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('지역구분')">지역 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('계열구분')">계열 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('학과명')">학과명 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('최저여부')">최저 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('논술점수')" style="text-align:right;">원점수 <span class="sort-icon">⇅</span></th>
+                                <th onclick="handleSort('환산점수')">100점환산 <span class="sort-icon">▼</span></th>
+                                <th>70%Cut / 최저선</th>
+                                <th>수능수학 백분위</th>
+                                <th>출제 라인 성격</th>
+                            </tr>
+                        </thead>
+                        <tbody id="browse-table-body">
+                            <tr><td colspan="11" class="no-data-msg">데이터를 불러오는 중입니다...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-container" id="browse-pagination-container"></div>
+            </div>
+
+            <!-- B-2: 대학명 중심 분류 카드 그리드 뷰 (토글 시 표시) -->
+            <div id="univ-grouped-view" class="univ-grouped-container" style="display:none;">
+                <!-- JS 동적 생성: 대학별 카드 리스트 -->
+            </div>
+
+            <!-- 하단 보조 분석 차트 (시험별 분포 + 수능최저 비교) -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title">📈 시험 종류별 점수 분포 분석</h3>
+                        <span class="chart-hint">시험 1(인문) vs 시험 2(자연) 표준편차</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="examDistChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h3 class="chart-card-title">⚖️ 수능최저 유무별 합격선 비교</h3>
+                        <span class="chart-hint">최저 있을 때 vs 없을 때 논술 컷 격차</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="minCompChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 통계 요약 카드 (시험 1 / 시험 2) -->
+            <div id="dist-stat-cards" class="dist-stat-cards-container"></div>
+
+            <!-- 수능 수학 백분위 심층 비교 섹션 (합격자 vs 불합격자) -->
+            <div class="chart-card full-width-chart" id="math-deep-section">
+                <div class="chart-card-header">
+                    <div>
+                        <h3 class="chart-card-title">🔬 전국 대학 수능 수학 백분위 심층 분석 (합격자 vs 불합격자)</h3>
+                        <div class="chart-hint">실제 합격자와 불합격자의 수능 수학 백분위 중앙값 비교 실측치</div>
+                    </div>
+                    <span class="badge-tag" style="background:#EDE9FE; color:#6D28D9;">표본 기반 실측치</span>
+                </div>
+                <div class="chart-wrapper" style="height:260px;">
+                    <canvas id="mathComparisonChart"></canvas>
+                </div>
+                <div id="math-insight-note" class="math-insight-box">
+                    <!-- JS 동적 내용 -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+</div>
+
+<!-- 수능수학 백분위 상세 모달 -->
+<div id="math-detail-modal" class="custom-modal-backdrop" style="display:none;" onclick="closeMathModal(event)">
+    <div class="custom-modal-card" onclick="event.stopPropagation()">
+        <div class="custom-modal-header">
+            <h3 id="modal-dept-title">학과명 수능 수학 백분위 상세</h3>
+            <button class="modal-close-btn" onclick="closeMathModal()">×</button>
+        </div>
+        <div class="custom-modal-body" id="modal-body-content">
+            <!-- JS 렌더링 -->
+        </div>
     </div>
-</body>
+</div>
 
+<!-- ── Floating Action Group (맨 위로, 맨 아래로, 시간표 설계기) ────────── -->
+<div class="floating-action-group">
+    <button class="floating-scroll-btn" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" title="맨 위로 바로가기">
+        ▲ 맨위로
+    </button>
+    <button class="floating-scroll-btn" onclick="window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })" title="맨 아래로 바로가기">
+        ▼ 맨아래로
+    </button>
+    <a href="index.html" class="floating-site-btn" title="논술 시간표 설계기 메인으로 이동">
+        <span class="floating-btn-icon">📅</span>
+        <span class="floating-btn-text">시간표 설계기</span>
+        <span>→</span>
+    </a>
+</div>
+
+</body>
 </html>

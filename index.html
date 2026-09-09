@@ -29,10 +29,6 @@
                         for 논술 지원 전략 by SM</p>
                     <div class="header-links"
                         style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                        <a href="scores.html" class="btn-secondary"
-                            style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem; text-decoration: none; font-weight: 700; background: #0F5A43; color: #ffffff; border: 1px solid #F6C9D6;">
-                            📊 논술 합격선 분석 (New)
-                        </a>
                         <button onclick="openSecretPdf()" class="btn-secondary"
                             style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
                             📄 백분위별 지원 가능대학
@@ -320,23 +316,27 @@
                             <span id="timetable-count-badge"
                                 style="display:none; font-size:0.75rem; background:#F4C8D2; color:#0F5A43; padding:0.2rem 0.65rem; border-radius:999px; font-weight:700; margin-left:0.5rem; vertical-align:middle;"></span>
                         </h2>
-                        <div style="display: flex; gap: 0.5rem;">
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
                             <button class="btn-secondary" onclick="addNewTimetable()">＋ 새 시간표</button>
                             <!-- 세로 캡처 버튼 (세로가 가로보다 긴 직사각형 버튼: width: 42px, height: 50px) -->
                             <button class="btn-primary" onclick="captureTimetableVertical()"
-                                style="background-color: #be3a63; border-color: #be3a63; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; width: 42px; height: 50px; font-size: 0.58rem; line-height: 1.1; padding: 0; border-radius: 4px; cursor: pointer;">
+                                style="background-color: #be3a63; border-color: #be3a63; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; width: 42px; height: 50px; font-size: 0.58rem; line-height: 1.1; padding: 0; border-radius: 4px; cursor: pointer;"
+                                title="세로형 이미지로 캡처 저장 (OFF 카드는 캡처 시 제외됩니다)">
                                 <span style="transform: rotate(-90deg); display: inline-block; font-size: 0.85rem; margin-bottom: 1px;">📷</span>
                                 <span>세로</span>
                                 <span>캡처</span>
                             </button>
                             <!-- 가로 캡처 버튼 (가로가 세로보다 긴 직사각형 버튼: width: 120px, height: 50px) -->
                             <button class="btn-primary" onclick="captureTimetable()"
-                                style="background-color: #0F5A43; border-color: #0F5A43; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; width: 120px; height: 50px; font-size: 0.72rem; line-height: 1.2; padding: 0; border-radius: 4px; cursor: pointer;">
+                                style="background-color: #0F5A43; border-color: #0F5A43; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; width: 120px; height: 50px; font-size: 0.72rem; line-height: 1.2; padding: 0; border-radius: 4px; cursor: pointer;"
+                                title="가로형 이미지로 캡처 저장 (OFF 카드는 캡처 시 제외됩니다)">
                                 <span style="font-size: 0.95rem;">📷</span>
                                 <span>가로 캡처</span>
                             </button>
                         </div>
-
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--accent-dark-pink); text-align: right; margin-top: -1rem; margin-bottom: 0.5rem; font-weight: 600;">
+                        💡 <strong>안내:</strong> 시간표에서 <span style="background: #e2e8f0; color: #64748b; padding: 1px 4px; border-radius: 3px;">OFF</span>로 설정된 대학 카드는 <strong>이미지 캡처 시 자동으로 제외</strong>됩니다.
                     </div>
 
                     <!-- 캡처 영역 시작 -->
@@ -406,7 +406,7 @@
                 <div style="text-align: center; margin-bottom: 1rem;">
                     <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.4rem 0; color: var(--text-main);">🎓
                         논술
-                        지원 시간표 설계기 v4 <span
+                        지원 시간표 설계기 <span style="color: #be3a63;">v4.5</span> <span
                             style="font-size: 0.75rem; background: #F6C9D6; color: #0B5D45; padding: 0.15rem 0.4rem; border-radius: 999px; vertical-align: middle;">SM
                             Smart Match</span></h2>
                     <p style="font-size: 0.95rem; font-weight: 700; color: var(--primary); margin: 0;">"수시 6논술, 합격 로드맵
@@ -416,10 +416,19 @@
 
                 <h3
                     style="font-size: 0.95rem; font-weight: 700; margin: 0.8rem 0 0.5rem 0; color: #111827; display: flex; align-items: center; gap: 0.35rem;">
-                    🔄 버전별 주요 기능 & 업데이트 히스토리
+                    🚀 최신 업데이트 내역 안내 (v4.5)
                 </h3>
                 <ul
                     style="font-size: 0.82rem; line-height: 1.5; padding-left: 1.1rem; color: #1f2937; margin-bottom: 0.8rem; list-style-type: disc;">
+                    <li style="margin-bottom: 0.4rem;">
+                        <strong style="color: #0F5A43;">[v4.5 신규 기능]</strong>
+                        <div style="font-size:0.75rem; margin-top:2px; color:#374151;">
+                            • <strong>📊 논술 합격 점수 분석기 탑재</strong>: 대학별/계열별 100점 환산 합격선 다중 필터 탐색 & 비교 막대 차트<br>
+                            • <strong>✏️ 캡처 화면 펜/형광펜/획지우개 메모 기능</strong>: 캡처 즉시 나만의 필기 후 완성본 이미지 저장<br>
+                            • <strong>📅 2027 전형 data.csv 최신화</strong>: 최신 대학별 전형 일정 및 수능 최저기준 전면 반영<br>
+                            • <strong>🧩 시간표 카드 겹침 해제 & 컴팩트 개편</strong>: 글자 재배치로 가독성 극대화 (캡처 시 OFF 카드 자동 제외)
+                        </div>
+                    </li>
                     <li style="margin-bottom: 0.4rem;">
                         <strong>[v4 업데이트]</strong>
                         <div style="font-size:0.75rem; margin-top:2px; color:#374151;">
@@ -616,8 +625,96 @@
                 </div>
             </div>
         </div>
-        <!-- Floating How-To-Use Guide Widget -->
-        <div class="floating-guide-widget no-print" id="guide-widget">
+
+        <!-- 🎨 Capture Image Canvas & Drawing Editor Modal -->
+        <div id="capture-editor-modal" class="no-print" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 3000; justify-content: center; align-items: center; backdrop-filter: blur(6px);">
+            <div class="capture-editor-card" style="background: #ffffff; border-radius: 1rem; width: 95vw; max-width: 1300px; height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); border: 2px solid var(--border-color);">
+                
+                <!-- Toolbar Header -->
+                <div class="capture-toolbar" style="background: #FFF7FA; border-bottom: 1.5px solid var(--border-color); padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 0.4rem;">
+                            ✏️ 캡처 이미지 메모 & 편집기
+                        </h3>
+
+                        <!-- Tool Mode Selector -->
+                        <div class="editor-tool-group" style="display: inline-flex; background: #fff; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 2px; gap: 2px;">
+                            <button id="tool-pen" class="editor-tool-btn active" onclick="setDrawingTool('pen')" style="border:none; padding: 0.35rem 0.75rem; border-radius: 0.35rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                                ✏️ 펜
+                            </button>
+                            <button id="tool-highlighter" class="editor-tool-btn" onclick="setDrawingTool('highlighter')" style="border:none; padding: 0.35rem 0.75rem; border-radius: 0.35rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                                🖍️ 형광펜
+                            </button>
+                            <button id="tool-eraser" class="editor-tool-btn" onclick="setDrawingTool('eraser')" style="border:none; padding: 0.35rem 0.75rem; border-radius: 0.35rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;" title="터치/클릭한 선 전체를 깔끔하게 지웁니다">
+                                🧹 획 지우개
+                            </button>
+                        </div>
+
+                        <!-- Color Palette -->
+                        <div id="editor-colors" style="display: inline-flex; align-items: center; gap: 0.4rem; background: #fff; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">색상:</span>
+                            <div class="color-dot active" style="background: #ef4444;" onclick="setDrawingColor('#ef4444', this)" title="빨강"></div>
+                            <div class="color-dot" style="background: #0F5A43;" onclick="setDrawingColor('#0F5A43', this)" title="시그니처 그린"></div>
+                            <div class="color-dot" style="background: #3b82f6;" onclick="setDrawingColor('#3b82f6', this)" title="파랑"></div>
+                            <div class="color-dot" style="background: #f59e0b;" onclick="setDrawingColor('#f59e0b', this)" title="노랑"></div>
+                            <div class="color-dot" style="background: #8b5cf6;" onclick="setDrawingColor('#8b5cf6', this)" title="보라"></div>
+                            <div class="color-dot" style="background: #111827;" onclick="setDrawingColor('#111827', this)" title="검정"></div>
+                        </div>
+
+                        <!-- Line Width -->
+                        <div id="editor-sizes" style="display: inline-flex; align-items: center; gap: 0.4rem; background: #fff; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
+                            <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">굵기:</span>
+                            <button class="size-dot-btn active" onclick="setDrawingWidth(3, this)" title="얇게">
+                                <span style="display:inline-block; width:4px; height:4px; border-radius:50%; background:#111;"></span>
+                            </button>
+                            <button class="size-dot-btn" onclick="setDrawingWidth(6, this)" title="보통">
+                                <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#111;"></span>
+                            </button>
+                            <button class="size-dot-btn" onclick="setDrawingWidth(12, this)" title="두껍게">
+                                <span style="display:inline-block; width:11px; height:11px; border-radius:50%; background:#111;"></span>
+                            </button>
+                        </div>
+
+                        <!-- History Actions (Undo / Clear) -->
+                        <div style="display: inline-flex; gap: 0.35rem;">
+                            <button class="btn-secondary" onclick="undoDrawingStroke()" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; border-radius: 0.4rem;" title="마지막 획 실행 취소">
+                                ↩ 실행취소
+                            </button>
+                            <button class="btn-secondary" onclick="clearAllDrawingStrokes()" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; border-radius: 0.4rem; color: #dc2626;" title="모든 메모 지우기">
+                                🗑️ 전체삭제
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Save / Close Actions -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button class="btn-primary" onclick="saveFinalEditedImage()" style="padding: 0.45rem 1.1rem; font-size: 0.85rem; border-radius: 0.45rem; font-weight: 800; background: #0F5A43; display: flex; align-items: center; gap: 0.35rem;">
+                            💾 메모 포함 이미지 저장
+                        </button>
+                        <button class="btn-secondary" onclick="closeCaptureEditorModal()" style="padding: 0.45rem 0.9rem; font-size: 0.85rem; border-radius: 0.45rem;">
+                            닫기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas Viewport with Pan & Drawing Layer -->
+                <div id="capture-canvas-viewport" style="flex: 1; overflow: auto; background: #e2e8f0; position: relative; display: flex; justify-content: center; align-items: flex-start; padding: 1.5rem;">
+                    <div id="canvas-composite-wrapper" style="position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border-radius: 4px; overflow: hidden; background: #fff; line-height: 0;">
+                        <!-- Base captured image canvas -->
+                        <canvas id="base-capture-canvas" style="display: block;"></canvas>
+                        <!-- Top overlay drawing canvas -->
+                        <canvas id="drawing-overlay-canvas" style="position: absolute; top: 0; left: 0; cursor: crosshair; touch-action: none;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Floating Action Area (Guide + Site Switch Button) -->
+        <div class="floating-action-container no-print" id="floating-action-container">
+            <a href="scores.html" class="floating-site-btn" title="대학별 논술 합격 점수 및 100점 환산 비교 분석 페이지로 이동">
+                <span class="floating-btn-icon">📊</span>
+                <span class="floating-btn-text">논술 합격 점수</span>
+                <span class="floating-btn-badge">NEW</span>
+            </a>
             <button class="guide-toggle-btn" onclick="toggleGuideCard()" id="guide-toggle-btn">
                 💡 사용 설명서
             </button>
@@ -682,10 +779,13 @@
                             <div class="guide-step-desc">최종 설계안을 원하는 포맷으로 즉시 소장합니다.</div>
                             <div class="guide-step-methods">
                                 <div class="guide-method-item">
-                                    <span>📷 <strong>가로 캡처</strong>: 시간표와 요약표를 좌우로 한눈에 보는 와이드 PNG 저장</span>
+                                    <span>📷 <strong>가로 캡처</strong>: 시간표와 요약표를 좌우로 한눈에 보는 와이드 PNG 저장 (OFF 카드 자동 제외)</span>
                                 </div>
                                 <div class="guide-method-item">
-                                    <span>📸 <strong>세로 캡처</strong>: 모바일 소장 및 프린트에 최적화된 긴 세로 PNG 저장</span>
+                                    <span>📸 <strong>세로 캡처</strong>: 모바일 소장 및 프린트에 최적화된 긴 세로 PNG 저장 (OFF 카드 자동 제외)</span>
+                                </div>
+                                <div class="guide-method-item">
+                                    <span>📊 <strong>합격선 분석</strong>: 상단 <code>📊 논술 합격선 분석</code> 버튼으로 대학별/계열별 합격점수 비교</span>
                                 </div>
                                 <div class="guide-method-item">
                                     <span>📄 <strong>지원 정보</strong>: 백분위 가이드 및 약술형 PDF 정보 연동 활용</span>
