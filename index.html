@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>논술 지원 시간표 설계기 v4</title>
+    <title>논술 지원 시간표 설계기 v6</title>
     <meta name="description" content="2027학년도 주요 대학 논술 전형 일정을 조건별로 필터링하고 시간표로 시각화하는 설계 도구입니다.">
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -21,7 +21,7 @@
             <div style="flex: 1; min-width: 300px; display: flex; gap: 1rem; align-items: flex-start;">
                 <div>
                     <h1 style="margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem; color: #ffffff;">
-                        🎓 논술 지원 시간표 설계기 v4 <span
+                        🎓 논술 지원 시간표 설계기 v6 <span
                             style="font-size: 0.9rem; background: #F6C9D6; color: #0B5D45; padding: 0.25rem 0.65rem; border-radius: 999px; font-weight: 700; margin-left: 0.5rem; display: inline-block;">SM
                             Smart Match</span>
                     </h1>
@@ -29,6 +29,10 @@
                         for 논술 지원 전략 by SM</p>
                     <div class="header-links"
                         style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <button onclick="openConditionSortModal()" class="btn-secondary"
+                            style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem; background: #0F5A43; color: #ffffff; border-color: #0F5A43; font-weight: 700; cursor: pointer;">
+                            🔍 조건별 대학 탐색 & 정렬
+                        </button>
                         <button onclick="openSecretPdf()" class="btn-secondary"
                             style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 0.5rem;">
                             📄 백분위별 지원 가능대학
@@ -371,107 +375,55 @@
                     <div class="notice-box">
                         ⚠️ 본 서비스에서 제공하는 정보는 모의 계획용으로 참고 자료로만 활용하시기 바라며, 반드시 각 대학의 2027학년도 최종 모집 요강을 확인해 주시기 바랍니다.
                     </div>
-                </section>
-            </div>
-            <footer class="app-footer"
-                style="margin-top: 3rem; padding: 2.5rem 1.5rem; text-align: center; border-top: 1px solid #F4C8D2;">
-                <div
-                    style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
-                    <div
-                        style="font-size: 1.25rem; font-weight: 800; letter-spacing: 0.05em; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
-                        <span>SMART MATCH</span>
-                        <span style="color: #F4C8D2; font-weight: 300;">|</span>
-                        <span class="success-shine" style="font-size: 1.25rem;">Success Map</span>
-                    </div>
-                    <div style="width: 40px; height: 2px; background: #F4C8D2; border-radius: 1px; margin: 0.25rem 0;">
-                    </div>
-                    <p
-                        style="font-size: 0.88rem; color: var(--text-muted); font-weight: 500; line-height: 1.7; margin: 0; letter-spacing: -0.01em;">
-                        숙명의 진학 지도 노하우와 정밀한 전형 매칭 기술로,<br>
-                        <span style="color: var(--text-main); font-weight: 700;">나에게 맞는 논술 지원 로드맵을 설계합니다.</span>
-                    </p>
-                    <div style="width: 40px; height: 1px; background: #F4C8D2; border-radius: 1px; margin: 0.25rem 0;">
-                    </div>
-                    <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">
-                        © 2027 SM IP-MATCHING LAB. All rights reserved. 본 서비스는 비영리 학습 보조 도구입니다.
-                    </p>
-                </div>
-            </footer>
-        </div>
-        <!-- Welcome Modal -->
+                      <!-- Welcome Modal (v6 컴팩트 개편: 스크롤 없이 한눈에 보기) -->
         <div id="welcome-modal"
             style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(4px);">
             <div
-                style="background: var(--bg-card, #fff); padding: 1.25rem; border-radius: 1rem; text-align: left; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid var(--border-color);">
-                <div style="text-align: center; margin-bottom: 1rem;">
-                    <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.4rem 0; color: var(--text-main);">🎓
-                        논술
-                        지원 시간표 설계기 <span style="color: #be3a63;">v4.5</span> <span
-                            style="font-size: 0.75rem; background: #F6C9D6; color: #0B5D45; padding: 0.15rem 0.4rem; border-radius: 999px; vertical-align: middle;">SM
+                style="background: var(--bg-card, #fff); padding: 1.1rem 1.25rem; border-radius: 1rem; text-align: left; max-width: 520px; width: 92%; max-height: 95vh; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid var(--border-color);">
+                <div style="text-align: center; margin-bottom: 0.6rem;">
+                    <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0 0 0.2rem 0; color: var(--text-main);">🎓
+                        논술 지원 시간표 설계기 <span style="color: #be3a63;">v6</span> <span
+                            style="font-size: 0.72rem; background: #F6C9D6; color: #0B5D45; padding: 0.12rem 0.4rem; border-radius: 999px; vertical-align: middle;">SM
                             Smart Match</span></h2>
-                    <p style="font-size: 0.95rem; font-weight: 700; color: var(--primary); margin: 0;">"수시 6논술, 합격 로드맵
-                        짜기!"
-                    </p>
+                    <p style="font-size: 0.85rem; font-weight: 700; color: var(--primary); margin: 0;">"수시 6논술, 합격 로드맵 짜기!"</p>
                 </div>
 
-                <h3
-                    style="font-size: 0.95rem; font-weight: 700; margin: 0.8rem 0 0.5rem 0; color: #111827; display: flex; align-items: center; gap: 0.35rem;">
-                    🚀 최신 업데이트 내역 안내 (v4.5)
-                </h3>
-                <ul
-                    style="font-size: 0.82rem; line-height: 1.5; padding-left: 1.1rem; color: #1f2937; margin-bottom: 0.8rem; list-style-type: disc;">
-                    <li style="margin-bottom: 0.4rem;">
-                        <strong style="color: #0F5A43;">[v4.5 신규 기능]</strong>
-                        <div style="font-size:0.75rem; margin-top:2px; color:#374151;">
-                            • <strong>📊 논술 합격 점수 분석기 탑재</strong>: 대학별/계열별 100점 환산 합격선 다중 필터 탐색 & 비교 막대 차트<br>
-                            • <strong>✏️ 캡처 화면 펜/형광펜/획지우개 메모 기능</strong>: 캡처 즉시 나만의 필기 후 완성본 이미지 저장<br>
-                            • <strong>📅 2027 전형 data.csv 최신화</strong>: 최신 대학별 전형 일정 및 수능 최저기준 전면 반영<br>
-                            • <strong>🧩 시간표 카드 겹침 해제 & 컴팩트 개편</strong>: 글자 재배치로 가독성 극대화 (캡처 시 OFF 카드 자동 제외)
-                        </div>
-                    </li>
-                    <li style="margin-bottom: 0.4rem;">
-                        <strong>[v4 업데이트]</strong>
-                        <div style="font-size:0.75rem; margin-top:2px; color:#374151;">
-                            • <strong>수리 가중치 배열 추가</strong>: 수리 가중치 데이터 반영 및 계산 체계 고도화
-                        </div>
-                    </li>
-                    <li style="margin-bottom: 0.4rem;">
-                        <strong>[v3 업데이트]</strong>
-                        <div style="font-size:0.75rem; margin-top:2px; color:#374151;">
-                            • <strong>최신 DB 반영</strong>: 약술형 대학 전형을 포함한 DB 전면 통합 구축<br>
-                            • <strong>이미지 캡처 저장</strong>: 모의계획표 및 요약본 영역 전체를 PNG 이미지로 다운로드 가능<br>
-                            • <strong>요약 순서 변경</strong>: 드래그 및 클릭으로 원하는 순서대로 대학 카드 요약 목록 재배치 기능 추가
-                        </div>
-                    </li>
-                    <li style="margin-bottom: 0.4rem;">
-                        <strong>[v2 업데이트]</strong>
-                        <div style="font-size:0.75rem; margin-top:2px; color:#374151;">
-                            • <strong>인쇄 기능 지원</strong>: 설계 완료된 모의계획표 및 요약본 인쇄 기능 탑재<br>
-                            • <strong>계획표 시각화</strong>: 대학 검색 일정 즉시 연동 및 Transpose 캘린더 시각화
-                        </div>
-                    </li>
-                </ul>
+                <div style="background: rgba(15, 90, 67, 0.04); border: 1px solid rgba(15, 90, 67, 0.15); border-radius: 0.6rem; padding: 0.65rem 0.85rem; margin-bottom: 0.55rem;">
+                    <h3 style="font-size: 0.84rem; font-weight: 800; margin: 0 0 0.35rem 0; color: #0F5A43; display: flex; align-items: center; gap: 0.35rem;">
+                        🚀 최신 업데이트 내역 (v6)
+                    </h3>
+                    <div style="font-size: 0.74rem; line-height: 1.45; color: #1f2937;">
+                        • <strong>🔍 조건부 정렬 팝업 탐색기</strong>: 계열(자연/인문/의약) 1차 선택 후 수능최저순·수학가중치순 정렬 & 내 시간표 등록/후보 비교<br>
+                        • <strong>🎯 통합 슬림 퀵 도크</strong>: [맨위/맨아래], [설명서], [조건부정렬], [합격점수] 원클릭 빠른 내비게이션<br>
+                        • <strong>📊 논술 합격선 대시보드(v5) 연동</strong>: 70% Cut 환산점수 및 수능 수학 백분위 심층 비교<br>
+                        • <strong>✏️ 캡처 메모 드로잉 도구</strong>: 펜·형광펜·지우개 필기 후 고화질 이미지 즉시 저장
+                    </div>
+                </div>
+
+                <!-- 히스토리 요약 뱃지 줄 -->
+                <div style="display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.55rem;">
+                    <span style="font-size: 0.68rem; background: #0F5A43; color: #FFFFFF; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 700;">v6 조건부 정렬 & 퀵 도크</span>
+                    <span style="font-size: 0.68rem; background: #FFF0F4; color: #BE3A63; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 700;">v5 합격선 점수 연동</span>
+                    <span style="font-size: 0.68rem; background: #E8F5EE; color: #0F5A43; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 700;">v4 수리 가중치 체계</span>
+                    <span style="font-size: 0.68rem; background: #EEF2FF; color: #3730A3; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 700;">v3 약술형 DB & 캡처</span>
+                    <span style="font-size: 0.68rem; background: #F3F4F6; color: #4B5563; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 700;">v2 인쇄 & 시각화</span>
+                </div>
 
                 <div
-                    style="background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b; padding: 0.5rem 0.75rem; font-size: 0.78rem; color: #b45309; margin-bottom: 0.8rem; border-radius: 0 0.25rem 0.25rem 0; line-height: 1.35;">
+                    style="background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; padding: 0.4rem 0.65rem; font-size: 0.72rem; color: #b45309; margin-bottom: 0.6rem; border-radius: 0 0.25rem 0.25rem 0; line-height: 1.3;">
                     ⚠️ 제공되는 일정은 모의 계획용 가안입니다. 원서 접수 전 반드시 <strong>최종 모집 요강</strong>을 확인하세요.
                 </div>
 
-                <!-- 예시 이미지 추가 (클릭 시 크게 보기) -->
-                <div style="text-align: center; margin-bottom: 0.8rem;">
-                    <p style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin: 0 0 4px 0;">🗺️ 모의
-                        계획표 및 요약본 캡처 예시 <span style="font-size:0.65rem; font-weight:500; color:#4f46e5;">(클릭 시 크게
-                            보기)</span></p>
+                <!-- 예시 이미지 (컴팩트) -->
+                <div style="text-align: center; margin-bottom: 0.65rem;">
+                    <p style="font-size: 0.68rem; font-weight: 700; color: var(--text-muted); margin: 0 0 3px 0;">🗺️ 모의 계획표 캡처 미리보기 <span style="font-size:0.62rem; color:#4f46e5;">(클릭 시 원본)</span></p>
                     <img src="ex.png" alt="시간표 예시" onclick="window.open('ex.png', '_blank')"
-                        style="max-width: 100%; max-height: 140px; object-fit: contain; border-radius: 0.375rem; border: 1px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.15s;"
-                        onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        style="max-width: 100%; max-height: 95px; object-fit: contain; border-radius: 0.35rem; border: 1px solid var(--border-color); cursor: pointer;">
                 </div>
 
-
-                <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
+                <div>
                     <button class="btn-primary" onclick="closeWelcomeModal()"
-                        style="padding: 0.6rem 2rem; font-size: 0.95rem; font-weight: 700; width: 100%;">시작하기
-                        🚀</button>
+                        style="padding: 0.55rem 1.5rem; font-size: 0.9rem; font-weight: 800; width: 100%; border-radius: 0.5rem; background: #0F5A43;">시작하기 🚀</button>
                 </div>
 
             </div>
@@ -626,7 +578,120 @@
             </div>
         </div>
 
-        <!-- 🎨 Capture Image Canvas & Drawing Editor Modal -->
+        <!-- 🔍 Condition Sort & Analyze Modal (조건별 대학 탐색 및 비교 정렬 팝업) -->
+        <div id="condition-sort-modal" class="no-print"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); z-index: 2500; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+            <div class="cond-modal-card"
+                style="background: #ffffff; border-radius: 1rem; width: 95vw; max-width: 1100px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 2px solid var(--border-color);">
+                
+                <!-- Modal Header -->
+                <div style="background: linear-gradient(135deg, #0F5A43 0%, #174235 100%); color: #ffffff; padding: 0.9rem 1.4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #F6C9D6;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;">
+                            🔍 2027 논술 지원 조건부 정렬 탐색기
+                        </h3>
+                        <span style="font-size: 0.75rem; background: #F6C9D6; color: #0B5D45; padding: 0.2rem 0.55rem; border-radius: 999px; font-weight: 800;">
+                            실시간 시간표 연동
+                        </span>
+                    </div>
+                    <button onclick="closeConditionSortModal()" style="background: none; border: none; font-size: 1.5rem; color: #ffffff; cursor: pointer; line-height: 1; padding: 0.2rem 0.5rem; border-radius: 0.35rem;" title="닫기">×</button>
+                </div>
+
+                <!-- Step 1 & 2 Control Panel -->
+                <div style="background: #FFF9FB; border-bottom: 1px solid var(--border-color); padding: 0.85rem 1.25rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                    
+                    <!-- 1단계: 계열 필수 선택 (데이터 과다 방지: 인문 / 자연 / 의치한약) -->
+                    <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.82rem; font-weight: 800; color: #0F5A43; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            <span style="background: #0F5A43; color:#fff; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem;">1</span>
+                            계열 선택:
+                        </span>
+                        <div class="cond-track-group" style="display: inline-flex; gap: 0.35rem;">
+                            <button type="button" class="cond-track-btn" data-track="자연" onclick="setCondModalTrack('자연')">
+                                📐 자연·이공
+                            </button>
+                            <button type="button" class="cond-track-btn" data-track="인문" onclick="setCondModalTrack('인문')">
+                                📚 인문·사회
+                            </button>
+                            <button type="button" class="cond-track-btn" data-track="의약" onclick="setCondModalTrack('의약')">
+                                🩺 의치한약수
+                            </button>
+                        </div>
+                        <span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 0.3rem;">
+                            ※ 데이터 집중 분석을 위해 계열별로 정렬됩니다.
+                        </span>
+                    </div>
+
+                    <!-- 2단계: 정렬 기준 & 시간표 필터 -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; border-top: 1px dashed #F6C9D6; padding-top: 0.55rem;">
+                        <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.82rem; font-weight: 800; color: #be3a63; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                <span style="background: #be3a63; color:#fff; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem;">2</span>
+                                정렬 기준:
+                            </span>
+                            <select id="cond-modal-sort" onchange="renderConditionModalTable()" style="padding: 0.35rem 0.65rem; border-radius: 0.4rem; border: 1.5px solid var(--border-color); font-size: 0.82rem; font-weight: 700; color: #334155; outline: none; background: #fff; cursor: pointer;">
+                                <option value="min-strict">📊 수능최저 높은순 (까다로운순)</option>
+                                <option value="min-easy">📉 수능최저 완화순 (수월한순/없음 우선)</option>
+                                <option value="math-weight">📐 수학 가중치 높은순 (미·확·기 범위/난이도)</option>
+                                <option value="date-asc">📅 시험 일자순 (빠른순)</option>
+                            </select>
+
+                            <!-- 시간표 포함 필터 (전체 / 담은 대학만 / 미선택 후보만) -->
+                            <div class="cond-filter-group" style="display: inline-flex; gap: 2px; background: #E2E8F0; padding: 2px; border-radius: 0.45rem; margin-left: 0.5rem;">
+                                <button type="button" class="cond-view-btn active" data-view="all" onclick="setCondModalView('all')">전체 (<span id="cond-cnt-all">0</span>)</button>
+                                <button type="button" class="cond-view-btn" data-view="included" onclick="setCondModalView('included')">⭐ 내 시간표 (<span id="cond-cnt-inc">0</span>)</button>
+                                <button type="button" class="cond-view-btn" data-view="excluded" onclick="setCondModalView('excluded')">➕ 후보 대학 (<span id="cond-cnt-exc">0</span>)</button>
+                            </div>
+                        </div>
+
+                        <!-- 검색창 -->
+                        <div style="position: relative; width: 220px;">
+                            <input type="text" id="cond-modal-search" placeholder="대학명/학과 빠른 검색..." oninput="renderConditionModalTable()"
+                                style="width: 100%; box-sizing: border-box; padding: 0.35rem 0.65rem 0.35rem 1.8rem; border-radius: 0.4rem; border: 1px solid var(--border-color); font-size: 0.78rem; font-family: var(--font-family); outline: none;">
+                            <span style="position: absolute; left: 0.55rem; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #94a3b8;">🔍</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Content (스크롤 가능 영역) -->
+                <div style="flex: 1; overflow-y: auto; padding: 0.75rem 1.25rem; background: #FAFAFB;">
+                    <div id="cond-modal-summary-bar" style="margin-bottom: 0.65rem; font-size: 0.78rem; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="cond-modal-stat-text">검색 결과: 0개 전형</span>
+                        <span style="font-size: 0.72rem; color: #0F5A43;">💡 버튼 클릭 시 시간표에 즉시 추가/제외됩니다.</span>
+                    </div>
+
+                    <div style="overflow-x: auto; background: #ffffff; border: 1px solid var(--border-color); border-radius: 0.6rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                        <table class="cond-data-table" style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+                            <thead>
+                                <tr style="background: #FFF0F4; border-bottom: 1.5px solid #F6C9D6; color: #0F5A43;">
+                                    <th style="padding: 0.6rem 0.75rem; width: 75px; text-align: center;">시간표</th>
+                                    <th style="padding: 0.6rem 0.75rem; width: 110px;">대학명</th>
+                                    <th style="padding: 0.6rem 0.75rem;">모집 및 세부 학과</th>
+                                    <th style="padding: 0.6rem 0.75rem; width: 110px;">고사 일자/시간</th>
+                                    <th style="padding: 0.6rem 0.75rem; width: 170px;">수능 최저학력기준</th>
+                                    <th style="padding: 0.6rem 0.75rem; width: 140px;">수리 범위/난이도</th>
+                                    <th style="padding: 0.6rem 0.75rem; width: 80px; text-align: center;">수학가중치</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cond-modal-tbody">
+                                <!-- JS 동적 렌더링 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div style="background: #ffffff; border-top: 1px solid var(--border-color); padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 0.75rem; color: #64748b;">
+                        현재 선택된 시간표: <strong id="cond-modal-active-tt-name" style="color: #0F5A43;">시간표 1</strong> (총 <span id="cond-modal-tt-count" style="color: #be3a63; font-weight: 800;">0</span>개 대학 등록됨)
+                    </div>
+                    <button class="btn-primary" onclick="closeConditionSortModal()" style="padding: 0.45rem 1.4rem; font-size: 0.85rem; border-radius: 0.4rem; background: #0F5A43;">
+                        완료 / 닫기
+                    </button>
+                </div>
+
+            </div>
+        </div>
         <div id="capture-editor-modal" class="no-print" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 3000; justify-content: center; align-items: center; backdrop-filter: blur(6px);">
             <div class="capture-editor-card" style="background: #ffffff; border-radius: 1rem; width: 95vw; max-width: 1300px; height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); border: 2px solid var(--border-color);">
                 
@@ -708,19 +773,37 @@
                 </div>
             </div>
         </div>
-        <!-- Floating Action Area (Guide + Site Switch Button) -->
-        <div class="floating-action-container no-print" id="floating-action-container">
-            <a href="scores.html" class="floating-site-btn" title="대학별 논술 합격 점수 및 100점 환산 비교 분석 페이지로 이동">
-                <span class="floating-btn-icon">📊</span>
-                <span class="floating-btn-text">논술 합격 점수</span>
-                <span class="floating-btn-badge">NEW</span>
-            </a>
-            <button class="guide-toggle-btn" onclick="toggleGuideCard()" id="guide-toggle-btn">
-                💡 사용 설명서
+        <!-- ── Right Floating Dock (설명서, 사이트 전환, 위/아래 통합 내비게이션 바) ── -->
+        <div class="right-floating-dock no-print" id="right-floating-dock">
+            <button class="dock-btn" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" title="맨 위로 바로가기" id="dock-btn-top">
+                <span class="dock-icon">▲</span>
+                <span class="dock-label">맨위로</span>
             </button>
+            <div class="dock-divider"></div>
+            <button class="dock-btn" onclick="toggleGuideCard()" title="설명서 열기/닫기" id="dock-guide-btn">
+                <span class="dock-icon">💡</span>
+                <span class="dock-label">설명서</span>
+            </button>
+            <div class="dock-divider"></div>
+            <button class="dock-btn" onclick="openConditionSortModal()" title="계열별 최저순/수학가중치순 대학 조건부 정렬 및 비교" id="dock-cond-btn">
+                <span class="dock-icon">🔍</span>
+                <span class="dock-label">조건부정렬</span>
+            </button>
+            <div class="dock-divider"></div>
+            <a href="scores.html" class="dock-btn dock-btn-link" title="논술 합격 점수 대시보드로 이동">
+                <span class="dock-icon">📊</span>
+                <span class="dock-label">합격점수</span>
+            </a>
+            <div class="dock-divider"></div>
+            <button class="dock-btn" onclick="window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })" title="맨 아래로 바로가기" id="dock-btn-bottom">
+                <span class="dock-icon">▼</span>
+                <span class="dock-label">맨아래로</span>
+            </button>
+
+            <!-- Guide Content Card (도크 좌측으로 팝업) -->
             <div class="guide-content-card" id="guide-card">
                 <div class="guide-header">
-                    <span class="guide-title">💡 논술 설계기 사용 설명서 (v4)</span>
+                    <span class="guide-title">💡 논술 설계기 사용 설명서 (v6)</span>
                     <button class="guide-close-btn" onclick="toggleGuideCard()">×</button>
                 </div>
                 <div class="guide-steps">
@@ -785,10 +868,13 @@
                                     <span>📸 <strong>세로 캡처</strong>: 모바일 소장 및 프린트에 최적화된 긴 세로 PNG 저장 (OFF 카드 자동 제외)</span>
                                 </div>
                                 <div class="guide-method-item">
-                                    <span>📊 <strong>합격선 분석</strong>: 상단 <code>📊 논술 합격선 분석</code> 버튼으로 대학별/계열별 합격점수 비교</span>
+                                    <span>✏️ <strong>메모 드로잉</strong>: 캡처 후 펜/형광펜/지우개로 나만의 메모 추가</span>
                                 </div>
                                 <div class="guide-method-item">
-                                    <span>📄 <strong>지원 정보</strong>: 백분위 가이드 및 약술형 PDF 정보 연동 활용</span>
+                                    <span>🔍 <strong>조건부 정렬(v6)</strong>: 우측 도크의 <code>🔍 조건부정렬</code>로 인문/자연/의약 최저순 및 수학가중치순 대학 비교</span>
+                                </div>
+                                <div class="guide-method-item">
+                                    <span>📊 <strong>합격선 분석(v5)</strong>: 우측 도크의 <code>📊 합격점수</code>로 대학별/계열별 합격선 비교</span>
                                 </div>
                             </div>
                         </div>
