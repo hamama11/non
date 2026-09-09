@@ -1612,6 +1612,21 @@ body {
     transition: color 0.18s ease;
 }
 
+.dock-switch-symbol {
+    position: absolute;
+    top: -4px;
+    right: -7px;
+    font-size: 0.62rem;
+    background: #0F5A43;
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 0px 2.5px;
+    line-height: 1.1;
+    font-weight: 900;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border: 1px solid #ffffff;
+}
+
 .dock-label {
     font-size: 0.65rem;
     font-weight: 800;

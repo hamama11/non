@@ -2615,18 +2615,26 @@ function closeWelcomeModal() {
 
 function toggleGuideCard() {
     const card = document.getElementById('guide-card');
+    const dockBtn = document.getElementById('dock-guide-btn');
     if (card) {
         card.classList.toggle('active');
+        if (dockBtn) {
+            dockBtn.classList.toggle('active', card.classList.contains('active'));
+        }
     }
 }
 
 // Close guide card when clicking outside
 document.addEventListener('click', function(event) {
-    const widget = document.getElementById('guide-widget');
+    const dock = document.getElementById('right-floating-dock');
     const card = document.getElementById('guide-card');
-    if (widget && card && card.classList.contains('active')) {
-        if (!widget.contains(event.target)) {
+    const dockBtn = document.getElementById('dock-guide-btn');
+    if (dock && card && card.classList.contains('active')) {
+        if (!dock.contains(event.target)) {
             card.classList.remove('active');
+            if (dockBtn) {
+                dockBtn.classList.remove('active');
+            }
         }
     }
 });
@@ -3193,6 +3201,287 @@ function saveStateToLocalStorage() {
     }
 }
 
+// ===== 조건별 대학 탐색 및 정렬 팝업 모달 시스템 =====
+const condModalState = {
+    selectedTrack: '자연', // '자연' | '인문' | '의약'
+    viewMode: 'all',       // 'all' | 'included' | 'excluded'
+    sortMode: 'min-strict' // 'min-strict' | 'min-easy' | 'math-weight' | 'date-asc'
+};
+
+/**
+ * 수능 최저학력기준 정량 난이도 점수화
+ * 점수가 클수록 까다로운 최저 (예: 4합 5 = 15점, 3합 4 = 11점, 3합 7 = 8점, 2합 5 = 5점, 1개 3 = 2점, 최저없음 = 0점)
+ */
+function evaluateMinimumStrictness(minStr) {
+    if (!minStr) return 0;
+    const s = minStr.replace(/\s+/g, '');
+    if (s.includes('없음') || s.includes('해당없음') || s === '-' || s === '') return 0;
+
+    let score = 1; // 최저가 있으면 기본 1점
+
+    // 4개 영역 합: 4합 N
+    const m4 = s.match(/4합\s*(\d+)/);
+    if (m4) {
+        const sum = parseInt(m4[1], 10);
+        return 20 - sum; // 4합 5 -> 15점, 4합 8 -> 12점
+    }
+
+    // 3개 영역 합: 3합 N
+    const m3 = s.match(/3합\s*(\d+)/);
+    if (m3) {
+        const sum = parseInt(m3[1], 10);
+        return 15 - sum; // 3합 3 -> 12점, 3합 4 -> 11점, 3합 7 -> 8점
+    }
+
+    // 2개 영역 합: 2합 N
+    const m2 = s.match(/2합\s*(\d+)/);
+    if (m2) {
+        const sum = parseInt(m2[1], 10);
+        return 10 - sum; // 2합 4 -> 6점, 2합 5 -> 5점, 2합 7 -> 3점
+    }
+
+    // 1개 영역: 1개 N등급
+    const m1 = s.match(/1개\s*(\d+)/);
+    if (m1) {
+        const grade = parseInt(m1[1], 10);
+        return 5 - grade; // 1개 3 -> 2점
+    }
+
+    // 2~3합 N
+    const m23 = s.match(/2~3합\s*(\d+)/);
+    if (m23) {
+        return 10 - parseInt(m23[1], 10);
+    }
+
+    return score;
+}
+
+function openConditionSortModal() {
+    const modal = document.getElementById('condition-sort-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    setCondModalTrack(condModalState.selectedTrack || '자연');
+}
+
+function closeConditionSortModal() {
+    const modal = document.getElementById('condition-sort-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function setCondModalTrack(track) {
+    condModalState.selectedTrack = track;
+    document.querySelectorAll('.cond-track-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-track') === track);
+    });
+    renderConditionModalTable();
+}
+
+function setCondModalView(view) {
+    condModalState.viewMode = view;
+    document.querySelectorAll('.cond-view-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-view') === view);
+    });
+    renderConditionModalTable();
+}
+
+function renderConditionModalTable() {
+    const tbody = document.getElementById('cond-modal-tbody');
+    if (!tbody) return;
+
+    const active = getActiveTimetable();
+    const sortSelect = document.getElementById('cond-modal-sort');
+    if (sortSelect) condModalState.sortMode = sortSelect.value;
+    const searchInput = document.getElementById('cond-modal-search');
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+    const ttNameEl = document.getElementById('cond-modal-active-tt-name');
+    const ttCountEl = document.getElementById('cond-modal-tt-count');
+    if (ttNameEl) ttNameEl.textContent = active.name;
+    if (ttCountEl) ttCountEl.textContent = active.univs.length;
+
+    // 1. 선택된 계열에 해당하는 전체 행 필터링
+    let filtered = state.univData.filter(row => {
+        const tracks = determineTracks(row);
+        return tracks.includes(condModalState.selectedTrack);
+    });
+
+    // 2. 검색어 필터링
+    if (query) {
+        filtered = filtered.filter(r => {
+            const u = (r['대학명'] || '').toLowerCase();
+            const d = (r['모집 및 세부 학과'] || '').toLowerCase();
+            const m = (r['수능 최저학력기준'] || '').toLowerCase();
+            return u.includes(query) || d.includes(query) || m.includes(query);
+        });
+    }
+
+    // 3. 시간표 포함 상태 판별 및 카운트
+    const getRowKey = (row) => {
+        let uName = row['대학명'] || '';
+        if (uName === '중앙대') {
+            const isChangUi = (row['모집 및 세부 학과'] || '').includes('창의형');
+            uName = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+        }
+        return `${uName} (${condModalState.selectedTrack})|${row['_rowIdx']}`;
+    };
+
+    const isRowIncluded = (row) => {
+        const key = getRowKey(row);
+        let uName = row['대학명'] || '';
+        if (uName === '중앙대') {
+            const isChangUi = (row['모집 및 세부 학과'] || '').includes('창의형');
+            uName = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+        }
+        const prefix = `${uName} (${condModalState.selectedTrack})`;
+        return active.univs.includes(key) || active.univs.some(k => k === prefix || k.startsWith(prefix + '|'));
+    };
+
+    const countAll = filtered.length;
+    const countIncluded = filtered.filter(isRowIncluded).length;
+    const countExcluded = countAll - countIncluded;
+
+    const cntAllEl = document.getElementById('cond-cnt-all');
+    const cntIncEl = document.getElementById('cond-cnt-inc');
+    const cntExcEl = document.getElementById('cond-cnt-exc');
+    if (cntAllEl) cntAllEl.textContent = countAll;
+    if (cntIncEl) cntIncEl.textContent = countIncluded;
+    if (cntExcEl) cntExcEl.textContent = countExcluded;
+
+    // 4. 시간표 보기 탭 적용
+    if (condModalState.viewMode === 'included') {
+        filtered = filtered.filter(isRowIncluded);
+    } else if (condModalState.viewMode === 'excluded') {
+        filtered = filtered.filter(r => !isRowIncluded(r));
+    }
+
+    // 5. 정렬 알고리즘 적용
+    filtered.sort((a, b) => {
+        const sortMode = condModalState.sortMode;
+        if (sortMode === 'min-strict') {
+            // 수능최저 까다로운 순 (내림차순)
+            const diff = evaluateMinimumStrictness(b['수능 최저학력기준']) - evaluateMinimumStrictness(a['수능 최저학력기준']);
+            if (diff !== 0) return diff;
+            return (b['_수리가중치'] || 0) - (a['_수리가중치'] || 0);
+        } else if (sortMode === 'min-easy') {
+            // 수능최저 수월한 순 (오름차순, 0인 최저없음이 맨 위)
+            const diff = evaluateMinimumStrictness(a['수능 최저학력기준']) - evaluateMinimumStrictness(b['수능 최저학력기준']);
+            if (diff !== 0) return diff;
+            return (b['_수리가중치'] || 0) - (a['_수리가중치'] || 0);
+        } else if (sortMode === 'math-weight') {
+            // 수학 가중치 높은순 (내림차순)
+            const diff = (b['_수리가중치'] || 0) - (a['_수리가중치'] || 0);
+            if (diff !== 0) return diff;
+            return evaluateMinimumStrictness(b['수능 최저학력기준']) - evaluateMinimumStrictness(a['수능 최저학력기준']);
+        } else if (sortMode === 'date-asc') {
+            // 시험 일자 빠른순
+            const dA = (a['고사 일자'] || '').trim();
+            const dB = (b['고사 일자'] || '').trim();
+            return dA.localeCompare(dB);
+        }
+        return 0;
+    });
+
+    // 6. 상태 요약 텍스트
+    const statEl = document.getElementById('cond-modal-stat-text');
+    if (statEl) {
+        statEl.innerHTML = `선택 계열: <strong style="color:#0F5A43;">${condModalState.selectedTrack}</strong> · 총 <strong>${filtered.length}</strong>개 전형 정렬됨`;
+    }
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 2rem; color: #94a3b8; font-size: 0.85rem;">
+                    조건에 해당하는 대학 전형이 없습니다.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    // 7. 테이블 행 렌더링
+    tbody.innerHTML = filtered.map(row => {
+        const isIncluded = isRowIncluded(row);
+        const rowIdx = row['_rowIdx'];
+        let uName = row['대학명'] || '';
+        if (uName === '중앙대') {
+            const isChangUi = (row['모집 및 세부 학과'] || '').includes('창의형');
+            uName = isChangUi ? '중앙대(창의형)' : '중앙대(일반형)';
+        }
+        const dept = row['모집 및 세부 학과'] || '-';
+        const date = `${row['고사 일자'] || ''} ${row['고사 시간'] || ''}`.trim();
+        const minCriteria = row['수능 최저학력기준'] || '없음';
+        const mathScope = row['수리논술 범위 및 난이도'] || '해당 없음';
+        const weight = row['_수리가중치'] || 0;
+
+        const isMinNone = minCriteria.includes('없음') || minCriteria === '-';
+        const minBadgeStyle = isMinNone
+            ? 'background: #F1F5F9; color: #64748B; border: 1px solid #CBD5E1;'
+            : 'background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-weight: 700;';
+
+        const weightStars = weight >= 5 ? '⭐⭐⭐' : (weight >= 3 ? '⭐⭐' : (weight >= 1 ? '⭐' : '-'));
+        const safeUName = uName.replace(/'/g, "\\'");
+
+        return `
+            <tr class="${isIncluded ? 'row-in-timetable' : ''}">
+                <td style="text-align: center;">
+                    <button type="button" class="cond-btn-toggle ${isIncluded ? 'is-added' : 'not-added'}"
+                        onclick="toggleUnivFromCondModal('${safeUName}', '${condModalState.selectedTrack}', ${rowIdx})">
+                        ${isIncluded ? '✓ 담김' : '＋ 담기'}
+                    </button>
+                </td>
+                <td style="font-weight: 800; color: ${isIncluded ? '#0F5A43' : '#1e293b'};">
+                    ${uName}
+                </td>
+                <td style="color: #334155; font-weight: 600;">
+                    ${dept}
+                </td>
+                <td style="color: #64748b; font-size: 0.76rem;">
+                    ${date}
+                </td>
+                <td>
+                    <span style="font-size: 0.74rem; padding: 2px 6px; border-radius: 4px; display: inline-block; ${minBadgeStyle}">
+                        ${minCriteria}
+                    </span>
+                </td>
+                <td style="font-size: 0.75rem; color: #475569;">
+                    ${mathScope}
+                </td>
+                <td style="text-align: center; font-weight: 800; color: #be3a63; font-size: 0.78rem;">
+                    ${weight > 0 ? `${weight}점 <span style="font-size:0.68rem; color:#94a3b8;">${weightStars}</span>` : '-'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function toggleUnivFromCondModal(uName, trackType, rowIdx) {
+    const active = getActiveTimetable();
+    const key = `${uName} (${trackType})|${rowIdx}`;
+    const prefix = `${uName} (${trackType})`;
+
+    const existingIdx = active.univs.findIndex(k => k === key || k === prefix || k.startsWith(prefix + '|'));
+    if (existingIdx > -1) {
+        active.univs.splice(existingIdx, 1);
+    } else {
+        active.univs.push(key);
+    }
+
+    saveStateToLocalStorage();
+    renderActiveTags();
+    renderGrid();
+    renderSummary();
+    if (typeof renderInteractiveSchedule === 'function') renderInteractiveSchedule();
+    renderConditionModalTable();
+}
+
+window.openConditionSortModal = openConditionSortModal;
+window.closeConditionSortModal = closeConditionSortModal;
+window.setCondModalTrack = setCondModalTrack;
+window.setCondModalView = setCondModalView;
+window.renderConditionModalTable = renderConditionModalTable;
+window.toggleUnivFromCondModal = toggleUnivFromCondModal;
+
 // ===== DOM 시작 =====
 document.addEventListener('DOMContentLoaded', init);
+
 

@@ -1117,114 +1117,163 @@ button {
 
 /* Floating Action Area (Guide + Site Switch Button) */
 .floating-action-container,
-.floating-guide-widget {
+/* ── Right Floating Dock (화면 우측 고정 슬림 도크 / scores.html과 동일 통일) ── */
+.right-floating-dock {
     position: fixed;
-    bottom: 2rem;
-    right: 2rem;
+    right: 1.25rem;
+    bottom: 2.5rem;
     z-index: 1999;
-    font-family: var(--font-family);
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
-}
-
-/* Floating Site Switch Button */
-.floating-site-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    background: linear-gradient(135deg, #be3a63 0%, #0F5A43 100%);
-    color: #ffffff !important;
-    text-decoration: none;
-    padding: 0.75rem 1.3rem;
-    border-radius: 999px;
-    font-weight: 800;
-    font-size: 0.9rem;
-    border: 2px solid #F6C9D6;
-    box-shadow: 0 6px 18px rgba(190, 58, 99, 0.4), 0 2px 6px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid var(--border-color);
+    border-radius: 2.2rem;
+    padding: 0.45rem 0.35rem;
+    box-shadow: 0 8px 24px rgba(15, 90, 67, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06);
+    gap: 0.2rem;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.94;
+}
+
+.right-floating-dock:hover {
+    opacity: 1;
+    background: #FFFFFF;
+    box-shadow: 0 12px 32px rgba(15, 90, 67, 0.24);
+    transform: translateY(-2px);
+}
+
+.dock-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 1rem;
+    border: none;
+    background: transparent;
+    color: #334155;
     cursor: pointer;
-    white-space: nowrap;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    padding: 0;
+    gap: 0.15rem;
+    font-family: var(--font-family);
+    user-select: none;
 }
 
-.floating-site-btn:hover {
-    transform: translateY(-3px) scale(1.03);
-    box-shadow: 0 10px 24px rgba(190, 58, 99, 0.55), 0 4px 8px rgba(0, 0, 0, 0.15);
-    border-color: #ffffff;
+.dock-btn:hover {
+    background: #FFF0F4;
+    color: var(--primary);
+    transform: scale(1.08);
 }
 
-.floating-btn-icon {
+.dock-btn:active {
+    transform: scale(0.95);
+}
+
+.dock-btn.active {
+    background: var(--primary);
+    color: #FFFFFF;
+}
+
+.dock-btn.active .dock-icon,
+.dock-btn.active .dock-label {
+    color: #FFFFFF !important;
+}
+
+.dock-btn-link:hover {
+    background: #E8F5EE;
+    color: var(--primary);
+}
+
+.dock-icon {
     font-size: 1.15rem;
+    line-height: 1;
+    color: var(--primary);
+    transition: color 0.18s ease;
+}
+
+.dock-switch-symbol {
+    position: absolute;
+    top: -4px;
+    right: -7px;
+    font-size: 0.62rem;
+    background: #0F5A43;
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 0px 2.5px;
+    line-height: 1.1;
+    font-weight: 900;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border: 1px solid #ffffff;
+}
+
+.dock-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     line-height: 1;
 }
 
-.floating-btn-text {
-    font-weight: 800;
-    letter-spacing: -0.01em;
+.dock-divider {
+    width: 24px;
+    height: 1px;
+    background: rgba(246, 201, 214, 0.6);
+    margin: 0.1rem 0;
 }
 
-.floating-btn-badge {
-    font-size: 0.65rem;
-    background: #ffffff;
-    color: #be3a63;
-    padding: 0.12rem 0.45rem;
-    border-radius: 999px;
-    font-weight: 900;
-    letter-spacing: -0.02em;
-}
-
-.guide-toggle-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--primary);
-    color: #ffffff;
-    border: 2px solid var(--border-color);
-    padding: 0.75rem 1.3rem;
-    border-radius: 999px;
-    font-weight: 700;
-    box-shadow: 0 4px 15px rgba(15, 90, 67, 0.3);
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.9rem;
-    white-space: nowrap;
-}
-
-.guide-toggle-btn:hover {
-    background: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(15, 90, 67, 0.4);
+@media (max-width: 768px) {
+    .right-floating-dock {
+        right: 0.6rem;
+        bottom: 1.5rem;
+        padding: 0.35rem 0.25rem;
+    }
+    .dock-btn {
+        width: 42px;
+        height: 42px;
+    }
+    .dock-icon {
+        font-size: 1rem;
+    }
+    .dock-label {
+        font-size: 0.6rem;
+    }
 }
 
 .guide-content-card {
     position: absolute;
-    bottom: 4rem;
-    right: 0;
+    bottom: 0;
+    right: 4.8rem;
     width: 380px;
-    max-width: 90vw;
+    max-width: 85vw;
     background: var(--bg-card);
     border: 2px solid var(--border-color);
     border-radius: 1rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    padding: 1.25rem;
+    box-shadow: 0 12px 36px rgba(15, 90, 67, 0.2);
+    padding: 1.1rem 1.25rem;
     display: none;
     flex-direction: column;
     gap: 0.85rem;
-    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2000;
 }
 
 .guide-content-card.active {
     display: flex;
 }
 
-@keyframes slideUp {
+@keyframes slideLeft {
     from {
         opacity: 0;
-        transform: translateY(10px) scale(0.95);
+        transform: translateX(15px) scale(0.96);
     }
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(0) scale(1);
     }
 }
 
@@ -1447,6 +1496,105 @@ button {
     color: #ffffff !important;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(15, 90, 67, 0.25);
+}
+
+/* ── 5. 조건별 대학 정렬 & 탐색 모달 스타일 (cond-modal) ────────────────── */
+.cond-track-btn {
+    padding: 0.35rem 0.85rem;
+    border-radius: 0.45rem;
+    border: 1.5px solid var(--border-color);
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    font-family: var(--font-family);
+}
+
+.cond-track-btn:hover {
+    border-color: #0F5A43;
+    color: #0F5A43;
+    background: #E8F5EE;
+}
+
+.cond-track-btn.active {
+    background: #0F5A43 !important;
+    color: #ffffff !important;
+    border-color: #0F5A43 !important;
+    box-shadow: 0 2px 6px rgba(15, 90, 67, 0.25);
+}
+
+.cond-view-btn {
+    padding: 0.25rem 0.65rem;
+    border-radius: 0.35rem;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: var(--font-family);
+}
+
+.cond-view-btn.active {
+    background: #ffffff;
+    color: #0F5A43;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.cond-data-table th, .cond-data-table td {
+    padding: 0.55rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.cond-data-table tbody tr:hover {
+    background: #FFF7F9;
+}
+
+.cond-data-table tbody tr.row-in-timetable {
+    background: #F4FBF7;
+}
+
+.cond-data-table tbody tr.row-in-timetable:hover {
+    background: #E8F7EE;
+}
+
+.cond-btn-toggle {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    border-radius: 0.35rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+    font-family: var(--font-family);
+    white-space: nowrap;
+}
+
+.cond-btn-toggle.is-added {
+    background: #0F5A43;
+    color: #ffffff;
+    border-color: #0F5A43;
+}
+
+.cond-btn-toggle.is-added:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+.cond-btn-toggle.not-added {
+    background: #ffffff;
+    color: #be3a63;
+    border-color: #F6C9D6;
+}
+
+.cond-btn-toggle.not-added:hover {
+    background: #be3a63;
+    color: #ffffff;
+    border-color: #be3a63;
 }
 
 

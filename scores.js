@@ -20,7 +20,7 @@ const state = {
     currentPage: 1,
     itemsPerPage: 20,
     activeExamTab: 'all',         // 'all' | '인문1' | '인문2' | '자연1' | '자연2' | '자연3' | '의치한약수' | '약술형'
-    strategyGuideOpen: false,     // 기본 접힘 상태
+    strategyGuideOpen: true,      // 기본 열림 상태 (점수대별 활용 방법)
     browseView: 'table',          // 기본: 'table' (전체 학과 테이블 뷰) | 'univ' (대학별 모아보기)
     expandedUnivs: new Set(),     // 아코디언 펼쳐진 대학들
     charts: {
@@ -578,9 +578,21 @@ function applyFilters() {
     updateMetrics();
 
     const isFilteredByUnivOrSearch = state.selectedUnivs.size > 0 || state.searchQuery.length > 0;
+    
+    // 사용자가 기본값에서 필터(검색어, 대학선택, 시험구분, 최저여부, 수학표본, 지역/계열 해제)를 하나라도 적용했는지 확인
+    const totalRegions = new Set(state.allData.map(d => d.지역구분).filter(Boolean)).size;
+    const totalFields  = new Set(state.allData.map(d => d.계열구분).filter(Boolean)).size;
+    const isAnyFilterApplied = isFilteredByUnivOrSearch
+        || (state.activeExamTab !== 'all')
+        || (state.selectedMinimum !== 'all')
+        || state.hasMathOnly
+        || (state.selectedRegions.size < totalRegions)
+        || (state.selectedFields.size < totalFields);
+
     const searchContainer = document.getElementById('search-mode-container');
     const deptSearchContainer = document.getElementById('dept-search-mode-container');
     const browseContainer = document.getElementById('browse-mode-container');
+    const browseBottomAnalytics = document.getElementById('browse-bottom-analytics');
 
     const headerBadge = document.getElementById('header-mode-badge');
     const headerDesc = document.getElementById('header-mode-desc');
@@ -615,7 +627,16 @@ function applyFilters() {
             if (tableView) tableView.style.display = 'none';
             renderUnivGroupedView();
         }
-        updateBrowseCharts();
+
+        // 처음 진입(전체 화면)이 아닌 필터/검색 조건이 1개라도 걸려있을 때만 하단 통계/비교 차트 노출
+        if (browseBottomAnalytics) {
+            if (isAnyFilterApplied) {
+                browseBottomAnalytics.style.display = 'flex';
+                updateBrowseCharts();
+            } else {
+                browseBottomAnalytics.style.display = 'none';
+            }
+        }
     } else if (matchedUnivs.length === 1) {
         // [Mode A-1]: 단일 대학 내부 심층 분석실
         const targetUniv = matchedUnivs[0];
@@ -705,9 +726,11 @@ window.handleSort = function(column) {
 function updateMetrics() {
     const d = state.filteredData;
     const total = d.length;
-    const scores = d.map(x => x.환산점수).filter(x => x > 0);
+    // 의치한약수(메디컬) 제외한 일반 학과 대상 환산점수 목록 (극단치 왜곡 방지)
+    const nonMedicalData = d.filter(x => !x.메디컬 && x.examType?.key !== '의치한약수');
+    const scores = nonMedicalData.map(x => x.환산점수).filter(x => x > 0);
     const avgScore = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : '-';
-    const maxItem = d.length ? d.reduce((p, c) => p.환산점수 > c.환산점수 ? p : c) : null;
+    const maxItem = nonMedicalData.length ? nonMedicalData.reduce((p, c) => p.환산점수 > c.환산점수 ? p : c) : null;
     const univCount = new Set(d.map(x => x.대학명)).size;
     const mathCount = d.filter(x => x.hasMathData).length;
 
@@ -734,7 +757,9 @@ function renderSearchModeBanner() {
     const uniqueUnivs = [...new Set(state.filteredData.map(d => d.대학명))];
     const univName = uniqueUnivs.length === 1 ? uniqueUnivs[0] : `검색결과: "${state.searchQuery}" (${uniqueUnivs.length}개 대학)`;
     const totalDepts = state.filteredData.length;
-    const scores = state.filteredData.map(d => d.환산점수).filter(v => v > 0);
+    // 메디컬 제외 일반 학과 대상 평균
+    const nonMedicalDepts = state.filteredData.filter(d => !d.메디컬 && d.examType?.key !== '의치한약수');
+    const scores = (nonMedicalDepts.length ? nonMedicalDepts : state.filteredData).map(d => d.환산점수).filter(v => v > 0);
     const univAvg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : '-';
 
     // 시험 구분별 통계 요약 칩
@@ -761,7 +786,7 @@ function renderSearchModeBanner() {
                 <span class="badge-tag" style="background:#FFFFFF; color:#1E40AF; font-size:0.8rem; font-weight:800;">${totalDepts}개 학과 분석 중</span>
             </div>
             <div class="univ-focus-stats">
-                <span>대학 전체 평균: <strong>${univAvg}점</strong></span>
+                <span>대학 환산평균(메디컬제외): <strong>${univAvg}점</strong></span>
                 <span style="opacity:0.6;">|</span>
                 <span>지역: <strong>${state.filteredData[0]?.지역구분 || '-'}</strong></span>
                 <div style="display:inline-flex; gap:0.4rem; margin-left:0.5rem; flex-wrap:wrap;">
@@ -1368,7 +1393,10 @@ function renderUnivGroupedView() {
     });
 
     const univList = Object.values(univMap).map(u => {
-        const scores = u.items.map(d => d.환산점수).filter(v => v > 0);
+        // 메디컬 제외 일반 학과 대상 평균 환산점수 계산 (메디컬 전용 대학이면 전체 기준)
+        const nonMedItems = u.items.filter(d => !d.메디컬 && d.examType?.key !== '의치한약수');
+        const targetItems = nonMedItems.length ? nonMedItems : u.items;
+        const scores = targetItems.map(d => d.환산점수).filter(v => v > 0);
         const avgScore = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
         const maxDept = u.items.reduce((p, c) => (p.환산점수 > c.환산점수) ? p : c, u.items[0]);
         const minDept = u.items.reduce((p, c) => (p.환산점수 < c.환산점수) ? p : c, u.items[0]);
@@ -1442,7 +1470,7 @@ function renderUnivGroupedView() {
 
                 <div class="univ-header-right">
                     <div class="univ-score-block">
-                        <span class="univ-score-label">대학 전체 환산평균</span>
+                        <span class="univ-score-label">대학 환산평균(메디컬제외)</span>
                         <span class="univ-score-val">${u.avgScore.toFixed(2)}점</span>
                     </div>
                     <button class="univ-focus-action-btn" onclick="handleSearch('${u.name}')" title="${escapeHtml(u.name)} 내부 학과 및 시험 상세 분석실로 이동">
