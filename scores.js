@@ -20,6 +20,7 @@ const state = {
     currentPage: 1,
     itemsPerPage: 20,
     activeExamTab: 'all',         // 'all' | '인문1' | '인문2' | '자연1' | '자연2' | '자연3' | '의치한약수' | '약술형'
+    selectedSubExam: 'all',       // 대학 모드 3안 세부 시험 필터: 'all' 또는 고유 시험구분(예: '인문 1', '상경계열')
     strategyGuideOpen: true,      // 기본 열림 상태 (점수대별 활용 방법)
     browseView: 'table',          // 기본: 'table' (전체 학과 테이블 뷰) | 'univ' (대학별 모아보기)
     expandedUnivs: new Set(),     // 아코디언 펼쳐진 대학들
@@ -74,7 +75,35 @@ function classifyExamType(item) {
         };
     }
 
-    // 3. 인문계열 세분화
+    // 3. 인문/상경/사회계열 세분화 (시험구분 명시값 우선 판별)
+    if (e.includes('상경') || e.includes('경상') || e.includes('사회계열') || e.includes('인문 2') || e.includes('인문2') || e.includes('인문 (오후 조)')) {
+        return {
+            key: '인문2',
+            label: '인문2 (상경·사회)',
+            fullLabel: '📊 인문 2 (상경·사회)',
+            badgeClass: 'exam-theme-hum2',
+            color: '#9A3412',
+            bgColor: '#FFEDD5',
+            borderColor: '#FED7AA',
+            chartBg: 'rgba(194, 65, 12, 0.85)',
+            chartBorder: '#C2410C'
+        };
+    }
+
+    if (e.includes('인문 1') || e.includes('인문1') || e.includes('인문계열') || e.includes('인문 (오전 조)')) {
+        return {
+            key: '인문1',
+            label: '인문1 (인문·어문)',
+            fullLabel: '📖 인문 1 (인문·어문)',
+            badgeClass: 'exam-theme-hum1',
+            color: '#C2410C',
+            bgColor: '#FFF7ED',
+            borderColor: '#FFEDD5',
+            chartBg: 'rgba(234, 88, 12, 0.85)',
+            chartBorder: '#EA580C'
+        };
+    }
+
     if (f.includes('인문') || f.includes('상경') || f.includes('사회') || e.includes('1') || m.includes('인문') || m.includes('경영') || m.includes('경제')) {
         // 인문 2: 상경·사회·정경 (경영, 경제, 통계, 미디어, 행정, 정치, 사회, 법학 등)
         if (m.includes('경영') || m.includes('경제') || m.includes('통계') || m.includes('미디어') || m.includes('행정') || m.includes('정치') || m.includes('사회') || m.includes('법') || m.includes('상경') || m.includes('금융') || m.includes('파이낸스') || m.includes('광고') || m.includes('언론') || f.includes('상경')) {
@@ -104,7 +133,35 @@ function classifyExamType(item) {
         };
     }
 
-    // 4. 자연계열 세분화
+    // 4. 자연계열 세분화 (시험구분 명시값 우선 판별)
+    if (e.includes('이학계열') || e.includes('자연 2') || e.includes('자연2') || e.includes('자연 (오후 조)')) {
+        return {
+            key: '자연2',
+            label: '자연2 (공학·IT)',
+            fullLabel: '💻 자연 2 (공학·IT)',
+            badgeClass: 'exam-theme-nat2',
+            color: '#1E40AF',
+            bgColor: '#EFF6FF',
+            borderColor: '#BFDBFE',
+            chartBg: 'rgba(30, 64, 175, 0.85)',
+            chartBorder: '#1E40AF'
+        };
+    }
+
+    if (e.includes('공학계열') || e.includes('자연 1') || e.includes('자연1') || e.includes('자연 (오전 조)')) {
+        return {
+            key: '자연1',
+            label: '자연1 (기초자연)',
+            fullLabel: '🔬 자연 1 (기초자연)',
+            badgeClass: 'exam-theme-nat1',
+            color: '#065F46',
+            bgColor: '#ECFDF5',
+            borderColor: '#A7F3D0',
+            chartBg: 'rgba(5, 150, 105, 0.85)',
+            chartBorder: '#059669'
+        };
+    }
+
     // 자연 3: 간호/보건/융합/자유전공
     if (m.includes('간호') || m.includes('치료') || m.includes('방사선') || m.includes('보건') || m.includes('자율') || m.includes('자유') || m.includes('인터칼리지') || m.includes('융합') || m.includes('임상') || m.includes('재활')) {
         return {
@@ -173,7 +230,7 @@ function parseCSV(text) {
 
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line) continue;
+        if (!line || line.startsWith('#')) continue;
 
         const values = [];
         let cur = '';
@@ -571,6 +628,7 @@ window.toggleHasMathOnly = function(checked) {
 window.clearSearch = function() {
     state.searchQuery = '';
     state.selectedUnivs.clear();
+    state.selectedSubExam = 'all';
     const si = document.getElementById('search-input');
     if (si) si.value = '';
     const clearBtn = document.getElementById('search-clear-btn');
@@ -582,6 +640,7 @@ window.clearSearch = function() {
 
 window.handleSearch = function(q) {
     state.searchQuery = q.trim().toLowerCase();
+    state.selectedSubExam = 'all';
     state.currentPage = 1;
     const si = document.getElementById('search-input');
     if (si && si.value !== q) si.value = q;
@@ -592,9 +651,16 @@ window.handleSearch = function(q) {
     applyFilters();
 };
 
+window.filterSubExam = function(examName) {
+    state.selectedSubExam = examName;
+    state.currentPage = 1;
+    applyFilters();
+};
+
 window.resetAllFilters = function() {
     clearSearch();
     state.isMultiSelectUniv = false;
+    state.selectedSubExam = 'all';
     toggleAllFilters('region', true);
     toggleAllFilters('field', true);
     setMinimumFilter('all');
@@ -652,6 +718,11 @@ function applyFilters() {
 
         // 다중 대학 칩 선택 필터
         if (state.selectedUnivs.size > 0 && !state.selectedUnivs.has(item.대학명)) {
+            return false;
+        }
+
+        // 대학 검색 모드 내 대학별 3안 세부 시험구분 필터
+        if (state.selectedSubExam && state.selectedSubExam !== 'all' && item.시험구분 !== state.selectedSubExam) {
             return false;
         }
 
@@ -847,28 +918,60 @@ function renderSearchModeBanner() {
     const banner = document.getElementById('univ-focus-banner');
     if (!banner) return;
 
+    // 현재 대학의 전체 데이터 추출 (필터 전 원본 기준 시험구분 목록)
+    const targetUniv = state.selectedUnivs.size === 1 ? Array.from(state.selectedUnivs)[0] : (state.searchQuery || '');
+    const univAllItems = state.allData.filter(d => {
+        if (state.selectedUnivs.size === 1) return state.selectedUnivs.has(d.대학명);
+        if (state.searchQuery) return d.대학명.toLowerCase().includes(state.searchQuery);
+        return false;
+    });
+
     const uniqueUnivs = [...new Set(state.filteredData.map(d => d.대학명))];
-    const univName = uniqueUnivs.length === 1 ? uniqueUnivs[0] : `검색결과: "${state.searchQuery}" (${uniqueUnivs.length}개 대학)`;
+    const univName = uniqueUnivs.length === 1 ? uniqueUnivs[0] : (targetUniv || `검색결과: "${state.searchQuery}"`);
     const totalDepts = state.filteredData.length;
+    
     // 메디컬 제외 일반 학과 대상 평균
     const nonMedicalDepts = state.filteredData.filter(d => !d.메디컬 && d.examType?.key !== '의치한약수');
     const scores = (nonMedicalDepts.length ? nonMedicalDepts : state.filteredData).map(d => d.환산점수).filter(v => v > 0);
     const univAvg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : '-';
 
-    // 시험 구분별 통계 요약 칩
+    // 해당 대학의 모든 3안 고유 시험구분 목록 도출
+    const baseItems = univAllItems.length > 0 ? univAllItems : state.filteredData;
     const examMap = {};
-    state.filteredData.forEach(d => {
-        if (!examMap[d.시험구분]) examMap[d.시험구분] = [];
-        examMap[d.시험구분].push(d.환산점수);
+    baseItems.forEach(d => {
+        const exName = d.시험구분 || '공통';
+        if (!examMap[exName]) examMap[exName] = [];
+        examMap[exName].push(d.환산점수);
     });
 
-    const examChips = Object.entries(examMap).map(([exam, arr]) => {
+    // 전체 버튼
+    const isAllActive = !state.selectedSubExam || state.selectedSubExam === 'all';
+    const allBtn = `
+        <button class="sub-exam-filter-btn ${isAllActive ? 'active' : ''}" 
+                onclick="filterSubExam('all')"
+                style="padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer; transition:all 0.2s;
+                       background:${isAllActive ? '#1E40AF' : '#F3F4F6'}; color:${isAllActive ? '#FFFFFF' : '#4B5563'}; border:1px solid ${isAllActive ? '#1E40AF' : '#D1D5DB'};">
+            전체 (${baseItems.length})
+        </button>
+    `;
+
+    // 3안 대학별 시험구분 필터 버튼 칩
+    const examButtons = Object.entries(examMap).map(([exam, arr]) => {
         const theme = getExamTheme(exam);
         const avg = (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1);
+        const isActive = state.selectedSubExam === exam;
         return `
-            <span class="exam-banner-chip" style="background:${theme.bgColor}; color:${theme.color}; border:1px solid ${theme.borderColor};">
-                <strong>${exam}</strong> (${arr.length}개): 평균 ${avg}점
-            </span>
+            <button class="sub-exam-filter-btn ${isActive ? 'active' : ''}" 
+                    onclick="filterSubExam('${escapeHtml(exam)}')"
+                    title="${escapeHtml(exam)} 시험지로 치른 학과만 필터링"
+                    style="padding:4px 10px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;
+                           background:${isActive ? theme.color : theme.bgColor}; 
+                           color:${isActive ? '#FFFFFF' : theme.color}; 
+                           border:1.5px solid ${theme.color};
+                           box-shadow:${isActive ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'};">
+                <span>${isActive ? '✓ ' : ''}<strong>${escapeHtml(exam)}</strong></span>
+                <span style="font-size:0.7rem; opacity:0.9;">(${arr.length}개·평균 ${avg}점)</span>
+            </button>
         `;
     }).join(' ');
 
@@ -876,14 +979,18 @@ function renderSearchModeBanner() {
         <div class="univ-focus-info">
             <div class="univ-focus-name">
                 <span>🏢 ${escapeHtml(univName)} <span style="font-size:1.05rem; font-weight:600; color:#E0E7FF;">내부 상세 분석실</span></span>
-                <span class="badge-tag" style="background:#FFFFFF; color:#1E40AF; font-size:0.8rem; font-weight:800;">${totalDepts}개 학과 분석 중</span>
+                <span class="badge-tag" style="background:#FFFFFF; color:#1E40AF; font-size:0.8rem; font-weight:800;">${totalDepts}개 학과 표시 중</span>
             </div>
-            <div class="univ-focus-stats">
-                <span>대학 환산평균(메디컬제외): <strong>${univAvg}점</strong></span>
-                <span style="opacity:0.6;">|</span>
-                <span>지역: <strong>${state.filteredData[0]?.지역구분 || '-'}</strong></span>
-                <div style="display:inline-flex; gap:0.4rem; margin-left:0.5rem; flex-wrap:wrap;">
-                    ${examChips}
+            <div class="univ-focus-stats" style="display:flex; flex-direction:column; gap:0.5rem; align-items:flex-start;">
+                <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+                    <span>대학 환산평균(메디컬제외): <strong>${univAvg}점</strong></span>
+                    <span style="opacity:0.6;">|</span>
+                    <span>지역: <strong>${baseItems[0]?.지역구분 || '-'}</strong></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-top:0.1rem;">
+                    <span style="font-size:0.78rem; font-weight:700; color:#DBEAFE;">🏷️ 대학 시험구분(3안) 선택:</span>
+                    ${allBtn}
+                    ${examButtons}
                 </div>
             </div>
         </div>
@@ -914,11 +1021,16 @@ function renderSearchTable() {
         const pct = Math.min(Math.max(item.환산점수, 0), 100);
         const theme = item.examType || getExamTheme(item);
 
-        // 시험 구분 색상 뱃지
+        // 시험 구분 색상 뱃지 (대학 3안 명칭 + 표준 융합 테마)
         const examLabel = `
-            <span class="exam-badge-pill" style="background:${theme.bgColor}; color:${theme.color}; border:1px solid ${theme.borderColor};">
-                ${theme.label}
-            </span>
+            <div style="display:flex; flex-direction:column; gap:2px; align-items:flex-start;">
+                <span class="exam-badge-pill" style="background:${theme.bgColor}; color:${theme.color}; border:1px solid ${theme.borderColor}; font-weight:700;">
+                    ${escapeHtml(item.시험구분 || theme.label)}
+                </span>
+                ${item.시험구분 && item.시험구분 !== theme.label ? `
+                    <span style="font-size:0.65rem; color:#6B7280; margin-left:2px;">(${theme.label})</span>
+                ` : ''}
+            </div>
         `;
 
         const cut70Disp = item.cut70 != null ? `${item.cut70.toFixed(2)}` : '-';
@@ -1291,6 +1403,11 @@ function renderDeptSearchTable() {
                     <span class="exam-badge-pill" style="background:${theme.bgColor}; color:${theme.color}; border:1px solid ${theme.borderColor}; font-size:0.68rem; padding:1px 5px; margin-left:3px;">
                         ${theme.label}
                     </span>
+                    ${item.시험구분 && item.시험구분 !== '공통' && item.시험구분 !== '시험 1' && item.시험구분 !== '시험 2' ? `
+                        <span class="badge-sub-exam" style="display:inline-block; font-size:0.65rem; color:${theme.color}; background:#FFFFFF; border:1px dashed ${theme.borderColor}; padding:0px 4px; border-radius:3px; font-weight:600; margin-left:2px;">
+                            🏷️ ${escapeHtml(item.시험구분)}
+                        </span>
+                    ` : ''}
                 </td>
                 <td>${minBadge}</td>
                 <td>
@@ -1667,18 +1784,28 @@ function renderBrowseTable() {
         return `
             <tr>
                 <td style="font-weight:700;">
-                    <a href="javascript:handleSearch('${escapeHtml(item.대학명)}')" style="color:var(--primary); text-decoration:underline;">
+                    <a href="javascript:handleSearch('${escapeHtml(item.대학명)}')" style="color:var(--primary); text-decoration:underline;" title="클릭하여 ${escapeHtml(item.대학명)} 내부 상세분석실로 이동">
                         ${escapeHtml(item.대학명)}
                     </a>
                 </td>
                 <td>
-                    <span class="exam-badge-pill" style="background:${theme.bgColor}; color:${theme.color}; border:1px solid ${theme.borderColor}; font-size:0.7rem; padding:1px 5px;">
-                        ${theme.label}
-                    </span>
+                    <div style="display:flex; flex-direction:column; gap:2px; align-items:flex-start;">
+                        <span class="exam-badge-pill" style="background:${theme.bgColor}; color:${theme.color}; border:1px solid ${theme.borderColor}; font-size:0.72rem; padding:1px 6px; font-weight:700;">
+                            ${theme.label}
+                        </span>
+                        ${item.시험구분 && item.시험구분 !== '공통' && item.시험구분 !== '시험 1' && item.시험구분 !== '시험 2' ? `
+                            <span class="badge-sub-exam" style="display:inline-block; font-size:0.65rem; color:${theme.color}; background:#FFFFFF; border:1px dashed ${theme.borderColor}; padding:0px 4px; border-radius:3px; font-weight:600;" title="대학별 고유 시험지 구분">
+                                🏷️ ${escapeHtml(item.시험구분)}
+                            </span>
+                        ` : ''}
+                    </div>
                 </td>
                 <td><span class="region-badge ${item.지역구분}">${item.지역구분}</span></td>
                 <td><span class="field-badge">${escapeHtml(item.계열구분)}</span></td>
-                <td style="font-weight:700;">${escapeHtml(item.학과명)}</td>
+                <td style="font-weight:700;">
+                    ${escapeHtml(item.학과명)}
+                    ${item.메디컬 ? '<span class="tag-medical-pill">의약</span>' : ''}
+                </td>
                 <td>${item.최저여부 === 'Y' ? '<span class="badge-min-y">Y</span>' : '<span class="badge-min-n">N</span>'}</td>
                 <td style="text-align:right;">${item.논술점수.toFixed(2)}</td>
                 <td>

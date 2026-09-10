@@ -942,6 +942,21 @@ body {
     font-size: 0.75rem;
 }
 
+.sub-exam-filter-btn {
+    box-shadow: var(--shadow-sm);
+    outline: none;
+}
+
+.sub-exam-filter-btn:hover {
+    filter: brightness(0.96);
+    transform: translateY(-1px);
+}
+
+.badge-sub-exam {
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
 /* ── 7. University Grouped View (Mode B) ──────────────────────────────── */
 .univ-grouped-container {
     display: flex;

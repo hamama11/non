@@ -1678,9 +1678,9 @@ function openShortPdf() {
 // ===== 🎨 캡처 이미지 드로잉 & 메모 편집기 로직 =====
 const editorState = {
     isOpen: false,
-    currentTool: 'pen', // 'pen' | 'highlighter' | 'eraser'
-    currentColor: '#ef4444',
-    currentWidth: 3,
+    currentTool: 'highlighter', // 'highlighter' | 'eraser'
+    currentColor: '#f59e0b',
+    currentWidth: 4,
     strokes: [], // Array of { tool, color, width, alpha, points: [{x,y}, ...] }
     isDrawing: false,
     currentStroke: null,
@@ -1884,8 +1884,40 @@ function openCaptureEditorModal(capturedCanvas, fileNamePrefix) {
 
     // 모달 표시
     modal.style.display = 'flex';
-    setDrawingTool('pen');
+
+    // 기본 '한눈에 보기(fit)' 모드 적용
+    setEditorViewMode('fit');
+
+    setDrawingTool('highlighter');
     renderAllStrokes();
+}
+
+function setEditorViewMode(mode) {
+    const wrapper = document.getElementById('canvas-composite-wrapper');
+    const viewport = document.getElementById('capture-canvas-viewport');
+    const baseCanvas = editorState.baseCanvas;
+    if (!wrapper || !viewport || !baseCanvas) return;
+
+    document.getElementById('view-fit-btn')?.classList.toggle('active', mode === 'fit');
+    document.getElementById('view-actual-btn')?.classList.toggle('active', mode === 'actual');
+
+    if (mode === 'fit') {
+        // 뷰포트 여백(패딩)을 제외한 가용 공간 계산
+        const availableW = viewport.clientWidth - 40;
+        const availableH = viewport.clientHeight - 40;
+
+        const scaleW = availableW / baseCanvas.width;
+        const scaleH = availableH / baseCanvas.height;
+        const fitScale = Math.min(scaleW, scaleH, 1.0); // 1.0 초과 확대는 방지
+
+        const fitWidth = Math.max(Math.round(baseCanvas.width * fitScale), 320);
+        wrapper.style.width = `${fitWidth}px`;
+        wrapper.style.maxWidth = '100%';
+    } else {
+        // 100% 원본 해상도 크기
+        wrapper.style.width = `${baseCanvas.width}px`;
+        wrapper.style.maxWidth = 'none';
+    }
 }
 
 function closeCaptureEditorModal() {
@@ -1908,7 +1940,7 @@ function setDrawingColor(color, el) {
     editorState.currentColor = color;
     document.querySelectorAll('#editor-colors .color-dot').forEach(d => d.classList.remove('active'));
     if (el) el.classList.add('active');
-    if (editorState.currentTool === 'eraser') setDrawingTool('pen');
+    if (editorState.currentTool === 'eraser') setDrawingTool('highlighter');
 }
 
 function setDrawingWidth(w, el) {
@@ -1953,6 +1985,7 @@ function saveFinalEditedImage() {
 
 window.openCaptureEditorModal = openCaptureEditorModal;
 window.closeCaptureEditorModal = closeCaptureEditorModal;
+window.setEditorViewMode = setEditorViewMode;
 window.setDrawingTool = setDrawingTool;
 window.setDrawingColor = setDrawingColor;
 window.setDrawingWidth = setDrawingWidth;
@@ -2008,20 +2041,22 @@ function captureTimetable() {
         summaryBody.style.width = '100%';
     }
 
-    // [3] 요약 테이블: table-layout:auto로 콘텐츠 길이에 따라 열 너비 자동 조정
+    // [3] 요약 테이블: 캡처 시 열 너비 및 텍스트 짤림 방지 최적화
     const summaryTable = area.querySelector('.summary-table');
     const origSummaryTableStyle = summaryTable ? {
         fontSize: summaryTable.style.fontSize,
         tableLayout: summaryTable.style.tableLayout,
-        width: summaryTable.style.width
+        width: summaryTable.style.width,
+        minWidth: summaryTable.style.minWidth
     } : null;
     if (summaryTable) {
-        summaryTable.style.fontSize = '0.65rem';
+        summaryTable.style.fontSize = '0.67rem';
         summaryTable.style.tableLayout = 'auto';
-        summaryTable.style.width = 'auto';
+        summaryTable.style.width = '100%';
+        summaryTable.style.minWidth = '620px';
     }
 
-    // [4] 가로형(Side-by-side) 캡처용 임시 스타일 적용
+    // [4] 가로형(Side-by-side) 캡처용 임시 스타일 적용 (너비 넉넉하게 1520px 확장)
     const originalContainerFlexDir = container.style.flexDirection;
     const originalContainerAlign = container.style.alignItems;
     const originalLeftWidth = leftPanel.style.width;
@@ -2032,10 +2067,10 @@ function captureTimetable() {
     container.style.flexDirection = 'row';
     container.style.alignItems = 'flex-start';
     leftPanel.style.width = '780px';
-    rightPanel.style.width = '640px';
+    rightPanel.style.width = '720px';
     rightPanel.style.overflow = 'visible';
     area.style.overflow = 'visible';
-    area.style.width = '1450px';
+    area.style.width = '1520px';
 
     // 캡처 완료 시 원래 상태로 복원
     const restoreStyles = () => {
@@ -2056,6 +2091,7 @@ function captureTimetable() {
             summaryTable.style.fontSize = origSummaryTableStyle.fontSize;
             summaryTable.style.tableLayout = origSummaryTableStyle.tableLayout;
             summaryTable.style.width = origSummaryTableStyle.width;
+            summaryTable.style.minWidth = origSummaryTableStyle.minWidth;
         }
         container.style.flexDirection = originalContainerFlexDir;
         container.style.alignItems = originalContainerAlign;
@@ -2066,7 +2102,10 @@ function captureTimetable() {
         area.style.width = originalAreaWidth;
     };
 
-    // html2canvas 실행 후 편집기 모달 오픈
+    // html2canvas 실행 후 편집기 모달 오픈 (area 크기를 정확하게 측정하여 짤림 방지)
+    const targetW = area.scrollWidth || 1520;
+    const targetH = area.scrollHeight || (area.offsetHeight + 60);
+
     html2canvas(area, {
         backgroundColor: '#ffffff',
         useCORS: true,
@@ -2074,8 +2113,10 @@ function captureTimetable() {
         scale: 2,
         scrollX: 0,
         scrollY: -window.scrollY,
-        windowWidth: 1500,
-        windowHeight: area.scrollHeight + 100
+        width: targetW,
+        height: targetH,
+        windowWidth: targetW + 100,
+        windowHeight: targetH + 100
     }).then(canvas => {
         restoreStyles();
         openCaptureEditorModal(canvas, '나의_논술_모의계획표_가로');
@@ -2133,17 +2174,19 @@ function captureTimetableVertical() {
         summaryBody.style.width = '100%';
     }
 
-    // [3] 요약 테이블: table-layout:auto로 콘텐츠 길이에 따라 열 너비 자동 조정
+    // [3] 요약 테이블: 세로 캡처 시 열 너비 및 텍스트 짤림 방지 최적화
     const summaryTable = area.querySelector('.summary-table');
     const origSummaryTableStyle = summaryTable ? {
         fontSize: summaryTable.style.fontSize,
         tableLayout: summaryTable.style.tableLayout,
-        width: summaryTable.style.width
+        width: summaryTable.style.width,
+        minWidth: summaryTable.style.minWidth
     } : null;
     if (summaryTable) {
-        summaryTable.style.fontSize = '0.65rem';
+        summaryTable.style.fontSize = '0.68rem';
         summaryTable.style.tableLayout = 'auto';
-        summaryTable.style.width = 'auto';
+        summaryTable.style.width = '100%';
+        summaryTable.style.minWidth = '1000px';
     }
 
     // [4] 세로형(시간표 아래 요약표) 캡처용 임시 스타일 적용
@@ -2162,7 +2205,7 @@ function captureTimetableVertical() {
     rightPanel.style.width = '100%';
     rightPanel.style.overflow = 'visible';
     area.style.overflow = 'visible';
-    area.style.width = '960px'; // A4 폭(960px 정도)에 맞춰 정렬
+    area.style.width = '1080px'; // 9개 열 요약표와 시간표가 여유 있게 배치되도록 1080px 확보
 
     // 캡처 완료 시 원래 상태로 복원
     const restoreStyles = () => {
@@ -2183,6 +2226,7 @@ function captureTimetableVertical() {
             summaryTable.style.fontSize = origSummaryTableStyle.fontSize;
             summaryTable.style.tableLayout = origSummaryTableStyle.tableLayout;
             summaryTable.style.width = origSummaryTableStyle.width;
+            summaryTable.style.minWidth = origSummaryTableStyle.minWidth;
         }
         container.style.flexDirection = originalContainerFlexDir;
         container.style.alignItems = originalContainerAlign;
@@ -2194,7 +2238,10 @@ function captureTimetableVertical() {
         area.style.width = originalAreaWidth;
     };
 
-    // html2canvas 실행 후 편집기 모달 오픈
+    // html2canvas 실행 후 편집기 모달 오픈 (area 크기를 정확하게 측정하여 짤림 방지)
+    const targetW = Math.max(area.scrollWidth, 1080);
+    const targetH = area.scrollHeight || (area.offsetHeight + 60);
+
     html2canvas(area, {
         backgroundColor: '#ffffff',
         useCORS: true,
@@ -2202,8 +2249,10 @@ function captureTimetableVertical() {
         scale: 2,
         scrollX: 0,
         scrollY: -window.scrollY,
-        windowWidth: 1000,
-        windowHeight: area.scrollHeight + 100
+        width: targetW,
+        height: targetH,
+        windowWidth: targetW + 100,
+        windowHeight: targetH + 100
     }).then(canvas => {
         restoreStyles();
         openCaptureEditorModal(canvas, '나의_논술_모의계획표_세로');
