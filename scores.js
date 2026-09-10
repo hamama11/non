@@ -262,6 +262,89 @@ function parseNum(val) {
     return isNaN(n) ? null : n;
 }
 
+// ── 로컬스토리지 상태 저장 및 복원 ──────────────────────────────────────────
+function saveScoresStateToLocalStorage() {
+    try {
+        const dataToSave = {
+            searchQuery: state.searchQuery,
+            selectedUnivs: Array.from(state.selectedUnivs),
+            isMultiSelectUniv: state.isMultiSelectUniv,
+            activeExamTab: state.activeExamTab,
+            selectedMinimum: state.selectedMinimum,
+            hasMathOnly: state.hasMathOnly,
+            browseView: state.browseView,
+            selectedRegions: Array.from(state.selectedRegions),
+            selectedFields: Array.from(state.selectedFields)
+        };
+        localStorage.setItem('essay_scores_state', JSON.stringify(dataToSave));
+    } catch (e) {
+        console.error('Failed to save scores state to localStorage:', e);
+    }
+}
+
+function loadScoresStateFromLocalStorage() {
+    try {
+        const saved = localStorage.getItem('essay_scores_state');
+        if (!saved) return;
+        const parsed = JSON.parse(saved);
+        if (parsed.searchQuery !== undefined) {
+            state.searchQuery = parsed.searchQuery;
+            const input = document.getElementById('search-input');
+            if (input) input.value = parsed.searchQuery;
+        }
+        if (Array.isArray(parsed.selectedUnivs)) {
+            state.selectedUnivs = new Set(parsed.selectedUnivs);
+        }
+        if (parsed.isMultiSelectUniv !== undefined) {
+            state.isMultiSelectUniv = parsed.isMultiSelectUniv;
+        }
+        if (parsed.activeExamTab) {
+            state.activeExamTab = parsed.activeExamTab;
+        }
+        if (parsed.selectedMinimum) {
+            state.selectedMinimum = parsed.selectedMinimum;
+            ['all', 'Y', 'N'].forEach(k => {
+                const btn = document.getElementById(`btn-min-${k}`);
+                if (btn) btn.classList.toggle('active', k === state.selectedMinimum);
+            });
+        }
+        if (parsed.hasMathOnly !== undefined) {
+            state.hasMathOnly = parsed.hasMathOnly;
+            const cb = document.getElementById('check-has-math');
+            if (cb) cb.checked = parsed.hasMathOnly;
+            const chip = document.getElementById('chip-has-math');
+            chip?.classList.toggle('active', parsed.hasMathOnly);
+        }
+        if (parsed.browseView) {
+            state.browseView = parsed.browseView;
+        }
+        if (Array.isArray(parsed.selectedRegions) && parsed.selectedRegions.length > 0) {
+            state.selectedRegions = new Set(parsed.selectedRegions);
+            document.querySelectorAll('#region-filters .filter-chip').forEach(chip => {
+                const input = chip.querySelector('input');
+                if (input) {
+                    const isChecked = state.selectedRegions.has(input.value);
+                    input.checked = isChecked;
+                    chip.classList.toggle('active', isChecked);
+                }
+            });
+        }
+        if (Array.isArray(parsed.selectedFields) && parsed.selectedFields.length > 0) {
+            state.selectedFields = new Set(parsed.selectedFields);
+            document.querySelectorAll('#field-filters .filter-chip').forEach(chip => {
+                const input = chip.querySelector('input');
+                if (input) {
+                    const isChecked = state.selectedFields.has(input.value);
+                    input.checked = isChecked;
+                    chip.classList.toggle('active', isChecked);
+                }
+            });
+        }
+    } catch (e) {
+        console.error('Failed to load scores state from localStorage:', e);
+    }
+}
+
 // ── 초기화 ───────────────────────────────────────────────────────────────────
 async function initApp() {
     try {
@@ -270,9 +353,15 @@ async function initApp() {
         const text = await res.text();
         state.allData = parseCSV(text);
 
-        handleUrlParams();
         initFilterOptions();
         initExamTabs();
+        
+        // URL 파라미터가 있으면 우선 적용하고, 없으면 로컬스토리지에서 복원
+        const hasUrlParam = handleUrlParams();
+        if (!hasUrlParam) {
+            loadScoresStateFromLocalStorage();
+        }
+
         initQuickUnivTags();
         applyFilters();
     } catch (err) {
@@ -290,7 +379,9 @@ function handleUrlParams() {
         state.searchQuery = searchVal.trim().toLowerCase();
         const input = document.getElementById('search-input');
         if (input) input.value = searchVal.trim();
+        return true;
     }
+    return false;
 }
 
 // ── 빠른 대학 선택 칩 (기본: 단일 선택, 다중선택 ON/OFF 스위치 지원) ─────────
@@ -680,6 +771,8 @@ function applyFilters() {
         renderDeptSearchTable();
         updateDeptSearchCharts();
     }
+
+    saveScoresStateToLocalStorage();
 }
 
 function sortData() {

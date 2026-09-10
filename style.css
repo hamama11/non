@@ -470,8 +470,20 @@ button {
     box-shadow: 0 3px 6px rgba(15, 90, 67, 0.1);
 }
 
+.timetable-card.main {
+    border-left: 3.5px solid var(--primary);
+    background-color: var(--bg-card);
+}
+
+.timetable-card.sub {
+    border-left: 3.5px solid #F59E0B;
+    background-color: #fffdf7;
+    border-color: #FDE68A;
+    opacity: 0.82;
+}
+
 .timetable-card.off {
-    opacity: 0.4;
+    opacity: 0.38;
     border-left-color: var(--text-muted);
     background-color: #fbfbfb;
 }
@@ -529,14 +541,37 @@ button {
 }
 
 .card-toggle {
-    font-size: 0.6rem;
-    font-weight: 700;
-    background-color: #F4C8D2;
-    padding: 0.05rem 0.3rem;
-    border-radius: 0.2rem;
-    color: #0F5A43;
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 0.08rem 0.32rem;
+    border-radius: 0.25rem;
     flex-shrink: 0;
-    line-height: 1.3;
+    line-height: 1.2;
+    letter-spacing: -0.2px;
+    transition: all 0.15s ease;
+}
+
+.card-toggle.toggle-main {
+    background-color: #0F5A43;
+    color: #ffffff;
+}
+
+.card-toggle.toggle-sub {
+    background-color: #F59E0B;
+    color: #ffffff;
+}
+
+.card-toggle.toggle-off {
+    background-color: #e2e8f0;
+    color: #94a3b8;
+}
+
+.timetable-card.sub .card-univ {
+    color: #92400E;
+}
+
+.timetable-card.sub .card-track-text {
+    color: #78350F;
 }
 
 .timetable-card.off .card-toggle {

@@ -326,6 +326,9 @@ function getActiveTimetable() {
 
 // ===== 초기화 =====
 async function init() {
+    // 로컬스토리지에서 이전 시간표 상태 불러오기
+    loadStateFromLocalStorage();
+
     try {
         await Promise.all([loadCsvData(), loadScoresData()]);
     } catch (err) {
@@ -948,23 +951,14 @@ function renderGrid() {
         cellMap[key].push(row);
     });
 
-    const isCardOn = row => {
-        const rowIdx = row['_rowIdx'];
-
-        if (active.manualOverrides[rowIdx] !== undefined) {
-            return active.manualOverrides[rowIdx];
-        }
-
-        return true;
-    };
-
     const conflictDates = new Set();
 
     allDates.forEach(date => {
         timeSlots.forEach(slot => {
             const key = `${date}__${slot}`;
             const cards = cellMap[key] || [];
-            const activeCardsCount = cards.filter(isCardOn).length;
+            // 메인과 서브 카드 모두 활성 카드로 충돌 여부 감지
+            const activeCardsCount = cards.filter(r => isCardActive(r)).length;
 
             if (activeCardsCount > 1) {
                 conflictDates.add(date);
@@ -1005,8 +999,9 @@ function renderGrid() {
 
                 cards.forEach((row, i) => {
                     const rowIdx = row['_rowIdx'];
-                    const isOn = isCardOn(row);
-                    const isOverlap = isOn && cards.filter(isCardOn).length > 1;
+                    const cardStatus = getCardStatus(row); // 'main' | 'sub' | 'off'
+                    const isCardAct = isCardActive(row);
+                    const isOverlap = isCardAct && cards.filter(r => isCardActive(r)).length > 1;
 
                     const mathNorm = row['_수리정규화'] || '해당없음';
                     const mathRaw = row['수리논술 범위 및 난이도'] || '';
@@ -1039,16 +1034,19 @@ function renderGrid() {
                         ? `<a href="scores.html?univ=${encodeURIComponent(row['대학명'])}" target="_blank" onclick="event.stopPropagation();" class="card-score-link" title="클릭하여 ${row['대학명']} 논술 합격선 분석 서브페이지로 이동">📊 ${scoreObj.환산점수.toFixed(1)}점</a>`
                         : '';
 
+                    const toggleLabel = cardStatus === 'main' ? 'MAIN' : (cardStatus === 'sub' ? 'SUB' : 'OFF');
+                    const nextStatusLabel = cardStatus === 'main' ? 'SUB(2지망)' : (cardStatus === 'sub' ? 'OFF(제외)' : 'MAIN(1지망)');
+
                     html += `
-                        <div class="timetable-card ${isOn ? '' : 'off'} ${isOverlap ? 'overlap' : ''}" 
+                        <div class="timetable-card ${cardStatus} ${isOverlap ? 'overlap' : ''}" 
                              onclick="toggleCardOnOff(${rowIdx})"
-                             title="${isOn ? '클릭하여 OFF 전환' : '클릭하여 ON 전환'}">
+                             title="현재: ${toggleLabel} / 클릭 시 [${nextStatusLabel}] 전환">
                             <div class="card-row-top">
                                 <div class="card-univ-block">
                                     <span class="card-univ">${row['대학명']}</span>
                                     <span class="card-badges">${typeBadge}${minBadge}${scoreTag}</span>
                                 </div>
-                                <span class="card-toggle">${isOn ? 'ON' : 'OFF'}</span>
+                                <span class="card-toggle toggle-${cardStatus}">${toggleLabel}</span>
                             </div>
                             <div class="card-track-text" title="${row['모집 및 세부 학과'] || ''}">${row['모집 및 세부 학과'] || ''}</div>
                             <div class="card-time-text">🕐 ${row['고사 시간'] || '시간 미정'}</div>
@@ -1073,14 +1071,32 @@ function renderGrid() {
     container.innerHTML = html;
 }
 
-// ===== 카드 개별 온오프 전환 =====
+// ===== 카드 3단계 상태 관리 (main: 1지망/메인, sub: 2지망/서브, off: 제외) =====
+function getCardStatus(row) {
+    const active = getActiveTimetable();
+    const rowIdx = row['_rowIdx'];
+    const val = active.manualOverrides[rowIdx];
+    if (val === undefined || val === true || val === 'main') return 'main';
+    if (val === 'sub') return 'sub';
+    return 'off'; // false or 'off'
+}
+
+function isCardActive(row) {
+    const status = getCardStatus(row);
+    return status === 'main' || status === 'sub';
+}
+
 function toggleCardOnOff(rowIdx) {
     const active = getActiveTimetable();
-
-    if (active.manualOverrides[rowIdx] === undefined) {
-        active.manualOverrides[rowIdx] = false;
+    const curVal = active.manualOverrides[rowIdx];
+    
+    // 순환: main (또는 undefined/true) -> sub -> off -> main
+    if (curVal === undefined || curVal === true || curVal === 'main') {
+        active.manualOverrides[rowIdx] = 'sub';
+    } else if (curVal === 'sub') {
+        active.manualOverrides[rowIdx] = 'off';
     } else {
-        active.manualOverrides[rowIdx] = !active.manualOverrides[rowIdx];
+        active.manualOverrides[rowIdx] = 'main';
     }
 
     saveStateToLocalStorage();
@@ -1239,6 +1255,14 @@ function renderSummary() {
 
     if (sortCol) {
         matchingRows.sort((a, b) => {
+            // 지원 상태(MAIN -> SUB -> OFF) 정렬 특수 처리
+            if (sortCol === '_지망상태') {
+                const statusOrder = { 'main': 1, 'sub': 2, 'off': 3 };
+                const orderA = statusOrder[getCardStatus(a)] || 99;
+                const orderB = statusOrder[getCardStatus(b)] || 99;
+                return isAsc ? orderA - orderB : orderB - orderA;
+            }
+
             let valA = a[sortCol] || '';
             let valB = b[sortCol] || '';
 
@@ -1279,20 +1303,25 @@ function renderSummary() {
 
     const rows = matchingRows;
 
-    // summary-count-badge 업데이트 (캡처 영역 안에 있어 이미지에 포함됨)
+    // summary-count-badge 업데이트 (MAIN / SUB / OFF 집계)
     const summaryCountBadge = document.getElementById('summary-count-badge');
     if (summaryCountBadge) {
         const totalCount = rows.length;
-        const onCount = rows.filter(row => isCardOn(row)).length;
-        summaryCountBadge.textContent = totalCount > 0 ? `${onCount}/${totalCount}` : '';
-        summaryCountBadge.style.display = totalCount > 0 ? 'inline-block' : 'none';
+        const mainCount = rows.filter(row => getCardStatus(row) === 'main').length;
+        const subCount = rows.filter(row => getCardStatus(row) === 'sub').length;
+        if (totalCount > 0) {
+            summaryCountBadge.textContent = `★메인 ${mainCount} · ▲서브 ${subCount} / 총 ${totalCount}`;
+            summaryCountBadge.style.display = 'inline-block';
+        } else {
+            summaryCountBadge.style.display = 'none';
+        }
     }
 
     body.innerHTML = `
         <table class="summary-table">
             <thead>
                 <tr>
-                    <th style="text-align:center; white-space:nowrap; width:45px;"></th>
+                    <th style="cursor:pointer; text-align:center; white-space:nowrap; width:65px;" onclick="sortSummaryTable('_지망상태')" title="클릭하여 메인(MAIN)/서브(SUB)/제외(OFF) 순으로 정렬">상태${getSortIndicator('_지망상태')}</th>
                     <th style="cursor:pointer; white-space:nowrap;" onclick="sortSummaryTable('대학명')">대학명${getSortIndicator('대학명')}</th>
                     <th style="cursor:pointer;" onclick="sortSummaryTable('모집 및 세부 학과')">계열 / 학과${getSortIndicator('모집 및 세부 학과')}</th>
                     <th style="cursor:pointer; white-space:nowrap;" onclick="sortSummaryTable('고사 일자')">고사 일자${getSortIndicator('고사 일자')}</th>
@@ -1341,19 +1370,46 @@ function renderSummary() {
                     // 역방향으로 uniqueKey 찾기
                     const uKey = active.univs.find(k => k.includes('|' + row['_rowIdx'])) || `${row['대학명']} (${row['모집 및 세부 학과']})|${row['_rowIdx']}`;
                     const rowIdx = row['_rowIdx'];
-                    const isOn = isCardOn(row);
+                    const cardStatus = getCardStatus(row); // 'main' | 'sub' | 'off'
 
                     const sObj = getScoreForUniv(row['대학명'], row['모집 및 세부 학과']);
                     const sLink = sObj 
                         ? `<br><a href="scores.html?univ=${encodeURIComponent(row['대학명'])}" target="_blank" onclick="event.stopPropagation();" class="summary-score-tag" title="논술 합격선 분석 상세 보기 (100점환산: ${sObj.환산점수.toFixed(1)}점)">📊 ${sObj.환산점수.toFixed(1)}점</a>`
                         : '';
 
+                    let rowClass = '';
+                    let rowStyle = '';
+                    let btnBg = '#0F5A43';
+                    let btnBorder = '#0F5A43';
+                    let btnColor = '#ffffff';
+                    let btnText = '★ MAIN';
+                    let btnTitle = '1지망 메인 (클릭 시 SUB 전환)';
+
+                    if (cardStatus === 'sub') {
+                        rowClass = 'summary-row-sub';
+                        rowStyle = 'opacity: 0.78; background-color: #fffdf5;';
+                        btnBg = '#F59E0B';
+                        btnBorder = '#D97706';
+                        btnColor = '#ffffff';
+                        btnText = '▲ SUB';
+                        btnTitle = '2지망 서브 (클릭 시 OFF 전환)';
+                    } else if (cardStatus === 'off') {
+                        rowClass = 'summary-row-off';
+                        rowStyle = 'opacity: 0.45; background-color: #f8fafc;';
+                        btnBg = '#e2e8f0';
+                        btnBorder = '#cbd5e1';
+                        btnColor = '#64748b';
+                        btnText = '✕ OFF';
+                        btnTitle = '제외 상태 (클릭 시 MAIN 전환)';
+                    }
+
                     return `
-                        <tr draggable="true" data-key="${uKey}" class="${isOn ? '' : 'summary-row-off'}" style="${isOn ? '' : 'opacity: 0.55; background-color: #f8fafc;'}">
-                            <td style="text-align:center;" class="no-drag-click">
+                        <tr draggable="true" data-key="${uKey}" class="${rowClass}" style="${rowStyle}">
+                            <td style="text-align:center; white-space:nowrap;" class="no-drag-click">
                                 <button onclick="toggleCardOnOff(${rowIdx}); event.stopPropagation();" 
-                                        style="font-size: 0.58rem; font-weight: 800; padding: 0.1rem 0.3rem; border-radius: 3px; cursor: pointer; border: 1px solid ${isOn ? '#0F5A43' : '#cbd5e1'}; background-color: ${isOn ? '#0F5A43' : '#f1f5f9'}; color: ${isOn ? '#ffffff' : '#64748b'}; width: 34px; line-height: 1.2; text-align: center; display: inline-block; transition: all 0.2s;">
-                                    ${isOn ? 'ON' : 'OFF'}
+                                        title="${btnTitle}"
+                                        style="font-size: 0.58rem; font-weight: 800; padding: 0.12rem 0.35rem; border-radius: 4px; cursor: pointer; border: 1px solid ${btnBorder}; background-color: ${btnBg}; color: ${btnColor}; min-width: 44px; line-height: 1.2; text-align: center; display: inline-block; transition: all 0.2s;">
+                                    ${btnText}
                                 </button>
                                 <button onclick="removeUnivByRowIdx(${rowIdx}); event.stopPropagation();"
                                         title="제거"
@@ -1913,12 +1969,26 @@ function captureTimetable() {
 
     if (!area || !container || !leftPanel || !rightPanel) return;
 
-    // [0] OFF 카드 및 요약표 OFF 행 임시 숨기기
+    // [0] OFF 카드/행 숨기기 및 SUB 카드/행 연하게(opacity: 0.52) 처리
     const offCards = area.querySelectorAll('.timetable-card.off');
     offCards.forEach(card => { card.setAttribute('data-hidden-for-capture', 'true'); card.style.display = 'none'; });
 
     const offRows = area.querySelectorAll('tr.summary-row-off');
     offRows.forEach(row => { row.setAttribute('data-hidden-for-capture', 'true'); row.style.display = 'none'; });
+
+    const subCards = area.querySelectorAll('.timetable-card.sub');
+    const origSubCardOpacities = [];
+    subCards.forEach(card => {
+        origSubCardOpacities.push(card.style.opacity);
+        card.style.opacity = '0.55'; // 캡처 시 연하게 표현
+    });
+
+    const subRows = area.querySelectorAll('tr.summary-row-sub');
+    const origSubRowOpacities = [];
+    subRows.forEach(row => {
+        origSubRowOpacities.push(row.style.opacity);
+        row.style.opacity = '0.55'; // 캡처 시 연하게 표현
+    });
 
     // [1] timetable-bg-wrapper: 세로로 긴 시간표 전체가 보이도록 overflow 해제
     const timetableWrapper = area.querySelector('.timetable-bg-wrapper');
@@ -1971,6 +2041,8 @@ function captureTimetable() {
     const restoreStyles = () => {
         offCards.forEach(card => { card.removeAttribute('data-hidden-for-capture'); card.style.display = ''; });
         offRows.forEach(row => { row.removeAttribute('data-hidden-for-capture'); row.style.display = ''; });
+        subCards.forEach((card, idx) => { card.style.opacity = origSubCardOpacities[idx] || ''; });
+        subRows.forEach((row, idx) => { row.style.opacity = origSubRowOpacities[idx] || ''; });
         if (timetableWrapper) {
             timetableWrapper.style.overflowX = origTimetableOverflow || '';
             timetableWrapper.style.overflow = '';
@@ -2022,12 +2094,26 @@ function captureTimetableVertical() {
 
     if (!area || !container || !leftPanel || !rightPanel) return;
 
-    // [0] OFF 카드 및 요약표 OFF 행 임시 숨기기
+    // [0] OFF 카드/행 숨기기 및 SUB 카드/행 연하게(opacity: 0.52) 처리
     const offCards = area.querySelectorAll('.timetable-card.off');
     offCards.forEach(card => { card.setAttribute('data-hidden-for-capture', 'true'); card.style.display = 'none'; });
 
     const offRows = area.querySelectorAll('tr.summary-row-off');
     offRows.forEach(row => { row.setAttribute('data-hidden-for-capture', 'true'); row.style.display = 'none'; });
+
+    const subCards = area.querySelectorAll('.timetable-card.sub');
+    const origSubCardOpacities = [];
+    subCards.forEach(card => {
+        origSubCardOpacities.push(card.style.opacity);
+        card.style.opacity = '0.55'; // 캡처 시 연하게 표현
+    });
+
+    const subRows = area.querySelectorAll('tr.summary-row-sub');
+    const origSubRowOpacities = [];
+    subRows.forEach(row => {
+        origSubRowOpacities.push(row.style.opacity);
+        row.style.opacity = '0.55'; // 캡처 시 연하게 표현
+    });
 
     // [1] timetable-bg-wrapper: 세로로 긴 시간표 전체가 보이도록 overflow 해제
     const timetableWrapper = area.querySelector('.timetable-bg-wrapper');
@@ -2082,6 +2168,8 @@ function captureTimetableVertical() {
     const restoreStyles = () => {
         offCards.forEach(card => { card.removeAttribute('data-hidden-for-capture'); card.style.display = ''; });
         offRows.forEach(row => { row.removeAttribute('data-hidden-for-capture'); row.style.display = ''; });
+        subCards.forEach((card, idx) => { card.style.opacity = origSubCardOpacities[idx] || ''; });
+        subRows.forEach((row, idx) => { row.style.opacity = origSubRowOpacities[idx] || ''; });
         if (timetableWrapper) {
             timetableWrapper.style.overflowX = origTimetableOverflow || '';
             timetableWrapper.style.overflow = '';
@@ -2851,9 +2939,9 @@ function renderInteractiveSchedule() {
                         return k === `${name} (${trackType})`;
                     });
                     
-                    // 계획표 ON/OFF 반영 (레거시 키일 때는 isAllOff 미지원)
-                    const isAllOff = !hasLegacyKey && isAdded && addedMatches.every(tr => active.manualOverrides[tr._rowIdx] === false);
-                    const isSomeOff = !hasLegacyKey && isAdded && addedMatches.some(tr => active.manualOverrides[tr._rowIdx] === false);
+                    // 계획표 상태 반영 (main, sub, off)
+                    const isAllOff = !hasLegacyKey && isAdded && addedMatches.every(tr => getCardStatus(tr) === 'off');
+                    const hasSub = !hasLegacyKey && isAdded && addedMatches.some(tr => getCardStatus(tr) === 'sub');
                     const isMatched = matches.some(tr => rowMatchesFilter(tr, f));
 
                     const colorVal = getUnivTextColor(uName);
@@ -2863,16 +2951,16 @@ function renderInteractiveSchedule() {
                         : `background:transparent;color:${colorVal};border-color:${colorVal};`;
                     
                     if (isAllOff) {
-                        btnStyle = `background:#94a3b8;color:#fff;border-color:#94a3b8;text-decoration:line-through;opacity:0.6;`;
-                    } else if (isSomeOff) {
-                        btnStyle += `opacity:0.75;`;
+                        btnStyle = `background:#94a3b8;color:#fff;border-color:#94a3b8;text-decoration:line-through;opacity:0.55;`;
+                    } else if (hasSub) {
+                        btnStyle = `background:#F59E0B;color:#fff;border-color:#D97706;box-shadow:0 0 0 1px #F59E0B;`;
                     }
                     
                     if (!isMatched) {
                         btnStyle += isAdded ? 'opacity:0.8;' : 'opacity:0.25;filter:grayscale(60%);';
                     }
 
-                    const toggleLabel = isAdded ? (isAllOff ? ' ✗' : ' ✓') : '';
+                    const toggleLabel = isAdded ? (isAllOff ? ' ✗' : (hasSub ? ' ▲' : ' ★')) : '';
                     buttons.push(
                         `<button class="sched-btn${isAdded ? ' sched-btn--on' : ''}" style="${btnStyle}" onclick="toggleUnivAndRenderSchedule('${uName.replace(/'/g, "\\'")}', '${trackType}', '${date.replace(/'/g, "\\'")}')">${displayLabel}${toggleLabel}</button>`
                     );
@@ -3198,6 +3286,23 @@ function saveStateToLocalStorage() {
         }));
     } catch (e) {
         console.error('Failed to save state to localStorage:', e);
+    }
+}
+
+function loadStateFromLocalStorage() {
+    try {
+        const saved = localStorage.getItem('essay_planner_state');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && Array.isArray(parsed.timetables) && parsed.timetables.length > 0) {
+                state.timetables = parsed.timetables;
+                if (parsed.activeTimetableId !== undefined) {
+                    state.activeTimetableId = parsed.activeTimetableId;
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load state from localStorage:', e);
     }
 }
 

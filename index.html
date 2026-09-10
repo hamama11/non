@@ -336,7 +336,7 @@
                         </div>
                     </div>
                     <div style="font-size: 0.72rem; color: var(--accent-dark-pink); text-align: right; margin-top: -1rem; margin-bottom: 0.5rem; font-weight: 600;">
-                        💡 <strong>안내:</strong> 시간표에서 <span style="background: #e2e8f0; color: #64748b; padding: 1px 4px; border-radius: 3px;">OFF</span>로 설정된 대학 카드는 <strong>이미지 캡처 시 자동으로 제외</strong>됩니다.
+                        💡 <strong>안내:</strong> 클릭 시 <span style="background: #0F5A43; color: #ffffff; padding: 1px 4px; border-radius: 3px; font-weight: 700;">MAIN(1지망)</span> ➔ <span style="background: #F59E0B; color: #ffffff; padding: 1px 4px; border-radius: 3px; font-weight: 700;">SUB(2지망)</span> ➔ <span style="background: #e2e8f0; color: #64748b; padding: 1px 4px; border-radius: 3px; font-weight: 700;">OFF(제외)</span> 순환 변경되며, <strong>SUB는 캡처 시 연하게</strong>, <strong>OFF는 캡처에서 자동 제외</strong>됩니다.
                     </div>
 
                     <!-- 캡처 영역 시작 -->
@@ -786,7 +786,7 @@
                 <span class="dock-label">조건부정렬</span>
             </button>
             <div class="dock-divider"></div>
-            <a href="scores.html" class="dock-btn dock-btn-link" title="합격선 대시보드로 이동 (사이트 전환)">
+            <a href="scores.html" class="dock-btn dock-btn-link" title="합격선 대시보드로 이동 (사이트 전환)" onclick="saveStateToLocalStorage()">
                 <span class="dock-icon" style="position: relative;">
                     📊<span class="dock-switch-symbol">⇄</span>
                 </span>
