@@ -698,12 +698,9 @@
                             ✏️ 캡처 이미지 메모 & 편집기
                         </h3>
 
-                        <!-- Tool Mode Selector -->
+                        <!-- Tool Mode Selector (형광펜 & 획 지우개만 유지) -->
                         <div class="editor-tool-group" style="display: inline-flex; background: #fff; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 2px; gap: 2px;">
-                            <button id="tool-pen" class="editor-tool-btn active" onclick="setDrawingTool('pen')" style="border:none; padding: 0.35rem 0.75rem; border-radius: 0.35rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
-                                ✏️ 펜
-                            </button>
-                            <button id="tool-highlighter" class="editor-tool-btn" onclick="setDrawingTool('highlighter')" style="border:none; padding: 0.35rem 0.75rem; border-radius: 0.35rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                            <button id="tool-highlighter" class="editor-tool-btn active" onclick="setDrawingTool('highlighter')" style="border:none; padding: 0.35rem 0.75rem; border-radius: 0.35rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
                                 🖍️ 형광펜
                             </button>
                             <button id="tool-eraser" class="editor-tool-btn" onclick="setDrawingTool('eraser')" style="border:none; padding: 0.35rem 0.75rem; border-radius: 0.35rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem;" title="터치/클릭한 선 전체를 깔끔하게 지웁니다">
@@ -714,11 +711,11 @@
                         <!-- Color Palette -->
                         <div id="editor-colors" style="display: inline-flex; align-items: center; gap: 0.4rem; background: #fff; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
                             <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">색상:</span>
-                            <div class="color-dot active" style="background: #ef4444;" onclick="setDrawingColor('#ef4444', this)" title="빨강"></div>
-                            <div class="color-dot" style="background: #0F5A43;" onclick="setDrawingColor('#0F5A43', this)" title="시그니처 그린"></div>
-                            <div class="color-dot" style="background: #3b82f6;" onclick="setDrawingColor('#3b82f6', this)" title="파랑"></div>
-                            <div class="color-dot" style="background: #f59e0b;" onclick="setDrawingColor('#f59e0b', this)" title="노랑"></div>
-                            <div class="color-dot" style="background: #8b5cf6;" onclick="setDrawingColor('#8b5cf6', this)" title="보라"></div>
+                            <div class="color-dot active" style="background: #f59e0b;" onclick="setDrawingColor('#f59e0b', this)" title="형광노랑"></div>
+                            <div class="color-dot" style="background: #10b981;" onclick="setDrawingColor('#10b981', this)" title="형광초록"></div>
+                            <div class="color-dot" style="background: #ef4444;" onclick="setDrawingColor('#ef4444', this)" title="형광분홍/빨강"></div>
+                            <div class="color-dot" style="background: #3b82f6;" onclick="setDrawingColor('#3b82f6', this)" title="형광파랑"></div>
+                            <div class="color-dot" style="background: #8b5cf6;" onclick="setDrawingColor('#8b5cf6', this)" title="형광보라"></div>
                             <div class="color-dot" style="background: #111827;" onclick="setDrawingColor('#111827', this)" title="검정"></div>
                         </div>
 
