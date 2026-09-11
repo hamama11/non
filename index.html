@@ -317,6 +317,9 @@
                                 style="display:none; font-size:0.75rem; background:#F4C8D2; color:#0F5A43; padding:0.2rem 0.65rem; border-radius:999px; font-weight:700; margin-left:0.5rem; vertical-align:middle;"></span>
                         </h2>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button class="btn-secondary" onclick="clearCurrentTimetable()" 
+                                style="color: #be3a63; border-color: rgba(190,58,99,0.3); background-color: rgba(190,58,99,0.05); font-weight: 700;"
+                                title="현재 시간표의 모든 대학을 비웁니다">🗑️ 전체 지우기</button>
                             <button class="btn-secondary" onclick="addNewTimetable()">＋ 새 시간표</button>
                             <!-- 세로 캡처 버튼 (세로가 가로보다 긴 직사각형 버튼: width: 42px, height: 50px) -->
                             <button class="btn-primary" onclick="captureTimetableVertical()"
@@ -410,11 +413,26 @@
                     ⚠️ 제공되는 일정은 모의 계획용 가안입니다. 원서 접수 전 반드시 <strong>최종 모집 요강</strong>을 확인하세요.
                 </div>
 
-                <!-- 예시 이미지 (컴팩트) -->
-                <div style="text-align: center; margin-bottom: 0.65rem;">
-                    <p style="font-size: 0.68rem; font-weight: 700; color: var(--text-muted); margin: 0 0 3px 0;">🗺️ 모의 계획표 캡처 미리보기 <span style="font-size:0.62rem; color:#4f46e5;">(클릭 시 원본)</span></p>
-                    <img src="ex.png" alt="시간표 예시" onclick="window.open('ex.png', '_blank')"
-                        style="max-width: 100%; max-height: 95px; object-fit: contain; border-radius: 0.35rem; border: 1px solid var(--border-color); cursor: pointer;">
+                <!-- 예시 이미지 (v4 가로형 vs v6 세로형 비교) -->
+                <div style="margin-bottom: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">🗺️ 시간표 캡처 예시 비교</span>
+                        <span style="font-size: 0.62rem; color: #4f46e5;">(클릭 시 화면 내에서 바로 확대)</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div style="text-align: center; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); border-radius: 0.4rem; padding: 0.35rem 0.3rem;">
+                            <div style="font-size: 0.62rem; font-weight: 700; color: #475569; margin-bottom: 3px;">📷 v4 가로 캡처</div>
+                            <img src="v4캡처_가로.png" alt="v4 가로 캡처 예시" onclick="openImageLightbox('v4캡처_가로.png', 'v4 가로 캡처 예시 (일정표·요약표 좌우 배치)')"
+                                style="width: 100%; height: 82px; object-fit: cover; border-radius: 0.3rem; border: 1px solid #cbd5e1; cursor: pointer; transition: transform 0.2s;"
+                                onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" title="클릭하여 화면 내에서 확대 보기">
+                        </div>
+                        <div style="text-align: center; background: rgba(15, 90, 67, 0.03); border: 1.5px solid rgba(15, 90, 67, 0.3); border-radius: 0.4rem; padding: 0.35rem 0.3rem;">
+                            <div style="font-size: 0.62rem; font-weight: 800; color: #0F5A43; margin-bottom: 3px;">✨ v6 세로 캡처</div>
+                            <img src="v6캡처.png" alt="v6 세로 캡처 예시" onclick="openImageLightbox('v6캡처.png', 'v6 세로 캡처 예시 (최신 지망배지·수리가중치·정렬 반영)')"
+                                style="width: 100%; height: 82px; object-fit: cover; border-radius: 0.3rem; border: 1px solid rgba(15, 90, 67, 0.2); cursor: pointer; transition: transform 0.2s;"
+                                onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" title="클릭하여 화면 내에서 확대 보기">
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -422,6 +440,49 @@
                         style="padding: 0.55rem 1.5rem; font-size: 0.9rem; font-weight: 800; width: 100%; border-radius: 0.5rem; background: #0F5A43;">시작하기 🚀</button>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- 이미지 확대 라이트박스 모달 (새 창 대신 브라우저 내에서 즉시 확대/축소) -->
+        <div id="image-lightbox-modal" onclick="closeImageLightbox(event)"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); justify-content: center; align-items: center; z-index: 3000; backdrop-filter: blur(5px); padding: 1rem; box-sizing: border-box;">
+            <div onclick="event.stopPropagation()"
+                style="background: var(--bg-card, #ffffff); border-radius: 0.75rem; border: 1px solid var(--border-color); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); max-width: 95vw; max-height: 92vh; width: 880px; display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-color); background: var(--bg-main, #f8fafc); flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 0.4rem;" id="lightbox-title">
+                        🗺️ 시간표 캡처 원본 확대
+                    </div>
+                    <!-- Zoom & Action Controls -->
+                    <div style="display: flex; align-items: center; gap: 0.45rem;">
+                        <div style="display: inline-flex; align-items: center; background: #ffffff; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 2px 6px; gap: 4px;">
+                            <button onclick="zoomLightboxImage(-0.25)" title="축소 (-)" 
+                                style="border: none; background: transparent; cursor: pointer; font-size: 0.9rem; font-weight: 800; color: var(--text-main); padding: 2px 6px; border-radius: 3px;">−</button>
+                            <span id="lightbox-zoom-level" style="font-size: 0.72rem; font-weight: 700; color: #0F5A43; min-width: 44px; text-align: center;">100%</span>
+                            <button onclick="zoomLightboxImage(0.25)" title="확대 (+)" 
+                                style="border: none; background: transparent; cursor: pointer; font-size: 0.9rem; font-weight: 800; color: var(--text-main); padding: 2px 6px; border-radius: 3px;">＋</button>
+                            <div style="width: 1px; height: 14px; background: var(--border-color); margin: 0 2px;"></div>
+                            <button onclick="resetLightboxZoom()" title="화면 맞춤 / 100% 리셋" 
+                                style="border: none; background: rgba(15,90,67,0.08); cursor: pointer; font-size: 0.68rem; font-weight: 700; color: #0F5A43; padding: 2px 6px; border-radius: 3px;">맞춤</button>
+                            <button onclick="setLightboxZoomActual()" title="100% 실제 크기" 
+                                style="border: none; background: rgba(0,0,0,0.05); cursor: pointer; font-size: 0.68rem; font-weight: 700; color: var(--text-muted); padding: 2px 6px; border-radius: 3px;">1:1</button>
+                        </div>
+                        <button onclick="closeImageLightbox()"
+                            style="background: rgba(0,0,0,0.06); border: none; font-size: 1.1rem; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-main); line-height: 1; transition: all 0.15s;"
+                            onmouseover="this.style.background='rgba(220,38,38,0.15)'; this.style.color='#dc2626';"
+                            onmouseout="this.style.background='rgba(0,0,0,0.06)'; this.style.color='var(--text-main)';"
+                            title="닫기 (ESC)">×</button>
+                    </div>
+                </div>
+                <!-- Image Viewport with Pan & Wheel Zoom -->
+                <div id="lightbox-viewport" style="flex: 1; overflow: auto; padding: 1rem; background: #0f172a; text-align: center; display: flex; justify-content: center; align-items: flex-start; cursor: grab;"
+                    onwheel="handleLightboxWheel(event)">
+                    <img id="lightbox-image" src="" alt="확대 이미지"
+                        style="max-width: 100%; max-height: none; height: auto; object-fit: contain; border-radius: 0.35rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); transform-origin: top center; transition: transform 0.15s ease-out; display: block; margin: auto;">
+                </div>
+                <div style="padding: 0.45rem 1rem; font-size: 0.7rem; color: var(--text-muted); background: var(--bg-main, #f8fafc); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <span>💡 <strong>마우스 휠(Ctrl+휠)</strong>이나 <strong>＋ / − 버튼</strong>으로 자유롭게 확대·축소하고, 드래그나 스크롤로 탐색할 수 있습니다.</span>
+                    <button class="btn-secondary" onclick="closeImageLightbox()" style="font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 4px;">닫기</button>
+                </div>
             </div>
         </div>
         <!-- Fortune Cookie Modal -->
@@ -846,6 +907,9 @@
                             <div class="guide-step-methods">
                                 <div class="guide-method-item">
                                     <span>🔄 <strong>다중 계획표</strong>: <code>＋ 새 시간표</code>로 Plan A/B/C 시나리오 비교</span>
+                                </div>
+                                <div class="guide-method-item">
+                                    <span>🗑️ <strong>전체 지우기</strong>: <code>전체 지우기</code> 버튼으로 현재 시간표 일괄 초기화</span>
                                 </div>
                                 <div class="guide-method-item">
                                     <span>⚙️ <strong>ON/OFF 토글</strong>: 겹치는 시험 일정 조율 (요약표 반영 선택)</span>

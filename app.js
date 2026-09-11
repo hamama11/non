@@ -1555,6 +1555,30 @@ function setupSummaryDragAndClick() {
 
 window.sortSummaryTable = sortSummaryTable;
 
+// ===== 현재 시간표 전체 지우기 =====
+function clearCurrentTimetable() {
+    const active = getActiveTimetable();
+    if (!active || active.univs.length === 0) {
+        alert('현재 시간표에 담긴 대학이 없습니다.');
+        return;
+    }
+
+    const confirmed = confirm(`현재 [${active.name}]에 담긴 ${active.univs.length}개 전형을 모두 지우시겠습니까?`);
+    if (!confirmed) return;
+
+    active.univs = [];
+    active.manualOverrides = {};
+
+    saveStateToLocalStorage();
+    renderActiveTags();
+    renderGrid();
+    renderSummary();
+    recommendUniversities(false);
+    if (typeof renderInteractiveSchedule === 'function') {
+        renderInteractiveSchedule();
+    }
+}
+
 // ===== 새 시간표 추가 및 탭 전환 =====
 function addNewTimetable() {
     const newId = Date.now();
@@ -1602,6 +1626,7 @@ window.handleFilterChange = handleFilterChange;
 window.resetFilters = resetFilters;
 window.toggleUniv = toggleUniv;
 window.toggleCardOnOff = toggleCardOnOff;
+window.clearCurrentTimetable = clearCurrentTimetable;
 window.addNewTimetable = addNewTimetable;
 window.switchTab = switchTab;
 window.openSecretPdf = openSecretPdf;
@@ -2749,6 +2774,141 @@ function closeWelcomeModal() {
         modal.style.display = 'none';
     }
 }
+
+// ===== 인앱 이미지 라이트박스 팝업 (새 창 없이 브라우저 내 확대/축소 및 패닝) =====
+let lightboxScale = 1.0;
+const LIGHTBOX_MIN_SCALE = 0.5;
+const LIGHTBOX_MAX_SCALE = 3.5;
+
+function applyLightboxTransform() {
+    const img = document.getElementById('lightbox-image');
+    const zoomText = document.getElementById('lightbox-zoom-level');
+    if (img) {
+        img.style.transform = `scale(${lightboxScale})`;
+    }
+    if (zoomText) {
+        zoomText.textContent = `${Math.round(lightboxScale * 100)}%`;
+    }
+}
+
+function zoomLightboxImage(delta) {
+    lightboxScale = Math.min(LIGHTBOX_MAX_SCALE, Math.max(LIGHTBOX_MIN_SCALE, lightboxScale + delta));
+    applyLightboxTransform();
+}
+
+function resetLightboxZoom() {
+    lightboxScale = 1.0;
+    applyLightboxTransform();
+    const vp = document.getElementById('lightbox-viewport');
+    if (vp) {
+        vp.scrollTop = 0;
+        vp.scrollLeft = 0;
+    }
+}
+
+function setLightboxZoomActual() {
+    lightboxScale = 1.5; // 실제 크기 근접 고해상도 확대
+    applyLightboxTransform();
+}
+
+function handleLightboxWheel(e) {
+    // Ctrl 키를 누르고 휠을 돌리거나 마우스 휠 조작 시 부드럽게 줌
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.2 : -0.2;
+        zoomLightboxImage(delta);
+    }
+}
+
+function openImageLightbox(src, title) {
+    const modal = document.getElementById('image-lightbox-modal');
+    const img = document.getElementById('lightbox-image');
+    const titleEl = document.getElementById('lightbox-title');
+    if (!modal || !img) return;
+
+    img.src = src;
+    if (titleEl && title) {
+        titleEl.textContent = title;
+    }
+    lightboxScale = 1.0;
+    applyLightboxTransform();
+    modal.style.display = 'flex';
+    
+    const vp = document.getElementById('lightbox-viewport');
+    if (vp) {
+        vp.scrollTop = 0;
+        vp.scrollLeft = 0;
+    }
+}
+
+function closeImageLightbox(e) {
+    if (e && e.target && e.target.closest && e.target.closest('#lightbox-image')) return;
+    const modal = document.getElementById('image-lightbox-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        const img = document.getElementById('lightbox-image');
+        if (img) img.src = '';
+    }
+}
+
+// 라이트박스 뷰포트 마우스 드래그 패닝(Scroll Drag)
+(function initLightboxDragPan() {
+    let isDown = false;
+    let startX, startY, scrollLeft, scrollTop;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const vp = document.getElementById('lightbox-viewport');
+        if (!vp) return;
+
+        vp.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            isDown = true;
+            vp.style.cursor = 'grabbing';
+            startX = e.pageX - vp.offsetLeft;
+            startY = e.pageY - vp.offsetTop;
+            scrollLeft = vp.scrollLeft;
+            scrollTop = vp.scrollTop;
+        });
+
+        vp.addEventListener('mouseleave', () => {
+            isDown = false;
+            vp.style.cursor = 'grab';
+        });
+
+        vp.addEventListener('mouseup', () => {
+            isDown = false;
+            vp.style.cursor = 'grab';
+        });
+
+        vp.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - vp.offsetLeft;
+            const y = e.pageY - vp.offsetTop;
+            const walkX = (x - startX) * 1.4;
+            const walkY = (y - startY) * 1.4;
+            vp.scrollLeft = scrollLeft - walkX;
+            vp.scrollTop = scrollTop - walkY;
+        });
+    });
+})();
+
+// ESC 키로 라이트박스 닫기
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('image-lightbox-modal');
+        if (modal && modal.style.display === 'flex') {
+            closeImageLightbox();
+        }
+    }
+});
+
+window.openImageLightbox = openImageLightbox;
+window.closeImageLightbox = closeImageLightbox;
+window.zoomLightboxImage = zoomLightboxImage;
+window.resetLightboxZoom = resetLightboxZoom;
+window.setLightboxZoomActual = setLightboxZoomActual;
+window.handleLightboxWheel = handleLightboxWheel;
 
 function toggleGuideCard() {
     const card = document.getElementById('guide-card');
