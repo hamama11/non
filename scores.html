@@ -86,7 +86,7 @@
                 ※ 🩺 <strong>의치한약수의(메디컬) 계열</strong>은 극단적 고득점 형성 및 전형 특수성으로 인해 <strong>점수대 평균 계산 및 전체 통계 지표에서 제외</strong>되어 있습니다. (개별 학과 목록에서는 정상 조회 가능)
             </div>
             <div>
-                <strong>📌 출처:</strong> 대학어디가(adiga.kr) 및 각 대학별 입학처 공식 발표 입시결과 공시자료
+                <strong>📌 출처:</strong> 각 대학 입학처
             </div>
             <div style="color:#94A3B8; font-size:0.72rem;">
                 * 합격점수 미공개 대학: 연세대, 성균관대, 서강대, 고려대, 이화여대, 서울시립대(일부) 등은 입학처 정책상 논술 점수를 비공개하여 목록에서 제외되어 있습니다.
@@ -197,8 +197,18 @@
             <div class="charts-grid">
                 <div class="chart-card">
                     <div class="chart-card-header">
-                        <h3 class="chart-card-title">📊 대학 내 학과별 100점 환산점수 및 70% Cut 비교</h3>
-                        <span class="chart-hint">시험 종류별 테마 색상 적용</span>
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                            <h3 class="chart-card-title" id="dept-score-chart-title">📊 대학/시험지 평균 대비 학과별 편차 비교</h3>
+                            <div class="chart-view-toggles" style="display:inline-flex; background:#F3F4F6; padding:2px; border-radius:6px; border:1px solid #E5E7EB;">
+                                <button id="btn-chart-mode-diverging" class="chart-toggle-btn active" onclick="switchDeptScoreChartMode('diverging')" style="border:none; background:#1E40AF; color:#fff; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:4px; cursor:pointer; transition:all 0.15s;">
+                                    ⚖️ 평균 편차 (효과적)
+                                </button>
+                                <button id="btn-chart-mode-absolute" class="chart-toggle-btn" onclick="switchDeptScoreChartMode('absolute')" style="border:none; background:transparent; color:#6B7280; font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:4px; cursor:pointer; transition:all 0.15s;">
+                                    📏 100점 환산 비교
+                                </button>
+                            </div>
+                        </div>
+                        <span class="chart-hint" id="dept-score-chart-hint">기준선(0점) = 대학/시험지 평균</span>
                     </div>
                     <div class="chart-wrapper">
                         <canvas id="searchDeptScoreChart"></canvas>
@@ -477,7 +487,7 @@
     <div class="dock-divider"></div>
     <button class="dock-btn" onclick="toggleStrategyGuide()" title="데이터 해석 가이드 열기/닫기" id="dock-guide-btn">
         <span class="dock-icon">💡</span>
-        <span class="dock-label">설명서</span>
+        <span class="dock-label">가이드</span>
     </button>
     <div class="dock-divider"></div>
     <a href="index.html" target="_blank" rel="noopener noreferrer" class="dock-btn dock-btn-link" title="시간표 설계기로 이동 (새 창 열기)" onclick="saveScoresStateToLocalStorage()">

@@ -19,10 +19,11 @@ const state = {
     sortDirection: 'desc',
     currentPage: 1,
     itemsPerPage: 20,
-    activeExamTab: 'all',         // 'all' | '인문1' | '인문2' | '자연1' | '자연2' | '자연3' | '의치한약수' | '약술형'
+    activeExamTab: 'all',         // 'all' | '인문' | '자연' | '의치한약수' | '약술형'
     selectedSubExam: 'all',       // 대학 모드 3안 세부 시험 필터: 'all' 또는 고유 시험구분(예: '인문 1', '상경계열')
     strategyGuideOpen: true,      // 기본 열림 상태 (점수대별 활용 방법)
     browseView: 'table',          // 기본: 'table' (전체 학과 테이블 뷰) | 'univ' (대학별 모아보기)
+    deptScoreChartMode: 'diverging', // 'diverging' (평균 대비 편차 차트) | 'absolute' (100점 환산 절대값 차트)
     expandedUnivs: new Set(),     // 아코디언 펼쳐진 대학들
     charts: {
         univ: null,
@@ -37,13 +38,115 @@ const state = {
     }
 };
 
-// ── 시험 종류 동적 분류 시스템 (인문1/2, 자연1/2/3, 의치한약수, 약술형) ───────────
+// ── 시험 종류 동적 분류 시스템 (인문1/2, 자연1/2/3, 의치한약수, 약술형, 한양대 세부시험) ─────
 function classifyExamType(item) {
     const u = item.대학명 || '';
     const f = item.계열구분 || '';
     const m = item.학과명 || '';
     const e = item.시험구분 || '';
     const line = item.합격점수라인의미 || '';
+
+    // 0. 한양대학교 고유 시험구분별 맞춤 색상 및 테마 (식별력 대폭 강화)
+    if (u.includes('한양') || e.includes('오전') || e.includes('오후 1') || e.includes('오후 2')) {
+        // 한양대 의예과
+        if (m.includes('의예') || e.includes('의예')) {
+            return {
+                key: '한양_의예',
+                label: '의예과',
+                fullLabel: '🩺 한양대 의예과',
+                badgeClass: 'exam-theme-hanyang-med',
+                color: '#7C3AED',
+                bgColor: '#F5F3FF',
+                borderColor: '#DDD6FE',
+                chartBg: 'rgba(124, 58, 237, 0.85)',
+                chartBorder: '#7C3AED'
+            };
+        }
+        // 자연 (오후 2): 미래차/반도체/융합전자/컴소
+        if (e.includes('오후 2') || e.includes('오후2')) {
+            return {
+                key: '자연_오후2',
+                label: '자연 (오후 2)',
+                fullLabel: '⚡ 자연 (오후 2: 첨단IT·전자)',
+                badgeClass: 'exam-theme-hanyang-pm2',
+                color: '#1E3A8A', // 깊은 네이비/미드나잇블루
+                bgColor: '#EFF6FF',
+                borderColor: '#93C5FD',
+                chartBg: 'rgba(30, 58, 138, 0.9)',
+                chartBorder: '#1E3A8A'
+            };
+        }
+        // 자연 (오후 1): 기계/화학/신소재/물리/수학/화공/산공/생명/전기/수학교육
+        if (e.includes('오후 1') || e.includes('오후1')) {
+            return {
+                key: '자연_오후1',
+                label: '자연 (오후 1)',
+                fullLabel: '🔬 자연 (오후 1: 공학·자연)',
+                badgeClass: 'exam-theme-hanyang-pm1',
+                color: '#2563EB', // 비비드 로열블루
+                bgColor: '#DBEAFE',
+                borderColor: '#60A5FA',
+                chartBg: 'rgba(37, 99, 235, 0.85)',
+                chartBorder: '#2563EB'
+            };
+        }
+        // 자연 (오전): 건축/토목/도시/식영/간호/인터칼리지
+        if (e.includes('오전')) {
+            return {
+                key: '자연_오전',
+                label: '자연 (오전)',
+                fullLabel: '🌱 자연 (오전: 건축·환경·보건)',
+                badgeClass: 'exam-theme-hanyang-am',
+                color: '#059669', // 산뜻한 에메랄드 그린
+                bgColor: '#ECFDF5',
+                borderColor: '#6EE7B7',
+                chartBg: 'rgba(5, 150, 105, 0.85)',
+                chartBorder: '#059669'
+            };
+        }
+        // 상경계열: 경영/경금/파경/정시/인터(인문)/정시
+        if (e.includes('상경')) {
+            return {
+                key: '상경계열',
+                label: '상경계열',
+                fullLabel: '📊 상경계열 (수리논술 포함)',
+                badgeClass: 'exam-theme-hanyang-biz',
+                color: '#4338CA', // 딥 인디고/보라
+                bgColor: '#EEF2FF',
+                borderColor: '#A5B4FC',
+                chartBg: 'rgba(67, 56, 202, 0.85)',
+                chartBorder: '#4338CA'
+            };
+        }
+        // 인문 1: 국문, 사학, 철학, 관광, 영화 등
+        if (e.includes('인문 1') || e.includes('인문1')) {
+            return {
+                key: '인문1',
+                label: '인문 1',
+                fullLabel: '📖 인문 1 (인문·어문)',
+                badgeClass: 'exam-theme-hum1',
+                color: '#EA580C', // 비비드 오렌지
+                bgColor: '#FFF7ED',
+                borderColor: '#FDBA74',
+                chartBg: 'rgba(234, 88, 12, 0.85)',
+                chartBorder: '#EA580C'
+            };
+        }
+        // 인문 2: 사회, 정책, 행정 등
+        if (e.includes('인문 2') || e.includes('인문2')) {
+            return {
+                key: '인문2',
+                label: '인문 2',
+                fullLabel: '🏛️ 인문 2 (사회과학)',
+                badgeClass: 'exam-theme-hum2',
+                color: '#B45309', // 웜 앰버/브라운
+                bgColor: '#FEF3C7',
+                borderColor: '#FCD34D',
+                chartBg: 'rgba(180, 83, 9, 0.85)',
+                chartBorder: '#B45309'
+            };
+        }
+    }
 
     // 1. 의치한약수 (메디컬)
     if (item.메디컬 || m.includes('의예') || m.includes('약학') || m.includes('치의예') || m.includes('수의예') || m.includes('한의예') || m.includes('의학과') || m.includes('약학과') || m.includes('한약') || e.includes('3')) {
@@ -134,7 +237,7 @@ function classifyExamType(item) {
     }
 
     // 4. 자연계열 세분화 (시험구분 명시값 우선 판별)
-    if (e.includes('이학계열') || e.includes('자연 2') || e.includes('자연2') || e.includes('자연 (오후 조)')) {
+    if (e.includes('이학계열') || e.includes('자연 2') || e.includes('자연2') || e.includes('자연 (오후 조)') || e.includes('자연 (오후 2)')) {
         return {
             key: '자연2',
             label: '자연2 (공학·IT)',
@@ -148,7 +251,7 @@ function classifyExamType(item) {
         };
     }
 
-    if (e.includes('공학계열') || e.includes('자연 1') || e.includes('자연1') || e.includes('자연 (오전 조)')) {
+    if (e.includes('공학계열') || e.includes('자연 1') || e.includes('자연1') || e.includes('자연 (오전 조)') || e.includes('자연 (오전)') || e.includes('자연 (오후 1)')) {
         return {
             key: '자연1',
             label: '자연1 (기초자연)',
@@ -212,10 +315,15 @@ function getExamTheme(itemOrStr) {
         return itemOrStr.examType || classifyExamType(itemOrStr);
     }
     const s = String(itemOrStr || '');
+    if (s.includes('오후 2') || s.includes('오후2')) return classifyExamType({ 시험구분: '자연 (오후 2)' });
+    if (s.includes('오후 1') || s.includes('오후1')) return classifyExamType({ 시험구분: '자연 (오후 1)' });
+    if (s.includes('오전')) return classifyExamType({ 시험구분: '자연 (오전)' });
     if (s.includes('의') || s.includes('약') || s.includes('치') || s.includes('수') || s.includes('메디')) return classifyExamType({ 메디컬: true });
     if (s.includes('약술')) return classifyExamType({ 합격점수라인의미: '약술' });
-    if (s.includes('인문2') || s.includes('상경')) return classifyExamType({ 계열구분: '상경', 학과명: '경영' });
-    if (s.includes('인문') || s.includes('1')) return classifyExamType({ 계열구분: '인문', 학과명: '국문' });
+    if (s.includes('상경')) return classifyExamType({ 시험구분: '상경계열', 계열구분: '상경', 학과명: '경영' });
+    if (s.includes('인문 2') || s.includes('인문2')) return classifyExamType({ 시험구분: '인문 2', 계열구분: '인문', 학과명: '사회' });
+    if (s.includes('인문 1') || s.includes('인문1')) return classifyExamType({ 시험구분: '인문 1', 계열구분: '인문', 학과명: '국문' });
+    if (s.includes('인문')) return classifyExamType({ 계열구분: '인문', 학과명: '국문' });
     if (s.includes('자연3') || s.includes('보건')) return classifyExamType({ 학과명: '간호' });
     if (s.includes('자연2') || s.includes('공학')) return classifyExamType({ 계열구분: '공학', 학과명: '컴퓨터' });
     return classifyExamType({ 계열구분: '자연', 학과명: '수학' });
@@ -521,18 +629,15 @@ window.toggleStrategyGuide = function() {
     }
 };
 
-// ── 시험구분 탭 (인문1/2, 자연1/2/3, 의치한약수, 약술형) ─────────────────────
+// ── 시험구분 탭 (전체, 인문, 자연, 의치한약수, 약술형) ─────────────────────
 function initExamTabs() {
     const tabBar = document.getElementById('exam-tab-bar');
     if (!tabBar) return;
 
     const tabs = [
         { key: 'all', label: '전체 보기', color: '#1E3A8A' },
-        { key: '인문1', label: '📖 인문 1 (인문·어문)', color: '#EA580C' },
-        { key: '인문2', label: '📊 인문 2 (상경·사회)', color: '#B45309' },
-        { key: '자연1', label: '🔬 자연 1 (기초과학)', color: '#059669' },
-        { key: '자연2', label: '💻 자연 2 (공학·IT)', color: '#1D4ED8' },
-        { key: '자연3', label: '🧬 자연 3 (보건·융합)', color: '#0D9488' },
+        { key: '인문', label: '📖 인문', color: '#EA580C' },
+        { key: '자연', label: '🔬 자연', color: '#059669' },
         { key: '의치한약수', label: '🩺 의치한약수', color: '#7C3AED' },
         { key: '약술형', label: '✏️ 약술형', color: '#D97706' }
     ];
@@ -706,8 +811,30 @@ function applyFilters() {
         if (!state.selectedRegions.has(item.지역구분)) return false;
         if (!state.selectedFields.has(item.계열구분)) return false;
         
-        // 시험구분 필터 (인문1/2, 자연1/2/3, 의치한약수, 약술형)
-        if (state.activeExamTab !== 'all' && item.examType.key !== state.activeExamTab) return false;
+        // 시험구분 필터 (전체, 인문, 자연, 의치한약수, 약술형)
+        if (state.activeExamTab !== 'all') {
+            const tab = state.activeExamTab;
+            const exKey = item.examType?.key || '';
+            const exLabel = item.examType?.label || '';
+            const field = item.계열구분 || '';
+            const examStr = item.시험구분 || '';
+
+            if (tab === '의치한약수') {
+                if (exKey !== '의치한약수' && exKey !== '한양_의예' && !item.메디컬) return false;
+            } else if (tab === '약술형') {
+                if (exKey !== '약술형') return false;
+            } else if (tab === '인문') {
+                // 의치한약수, 약술형 제외한 인문 계열
+                if (exKey === '의치한약수' || exKey === '한양_의예' || exKey === '약술형') return false;
+                const isHum = exKey.startsWith('인문') || exKey === '상경계열' || field.includes('인문') || examStr.includes('인문') || examStr.includes('상경');
+                if (!isHum) return false;
+            } else if (tab === '자연') {
+                // 의치한약수, 약술형 제외한 자연 계열
+                if (exKey === '의치한약수' || exKey === '한양_의예' || exKey === '약술형') return false;
+                const isNat = exKey.startsWith('자연') || field.includes('자연') || field.includes('공학') || field.includes('IT') || examStr.includes('자연');
+                if (!isNat) return false;
+            }
+        }
 
         if (state.selectedMinimum !== 'all') {
             if (state.selectedMinimum === 'Y' && item.최저여부 !== 'Y') return false;
@@ -851,6 +978,10 @@ function sortData() {
     const dir = state.sortDirection === 'asc' ? 1 : -1;
     state.filteredData.sort((a, b) => {
         let vA = a[col], vB = b[col];
+        if (col === '계열분류') {
+            vA = a.시험구분 || a.examType?.label || '';
+            vB = b.시험구분 || b.examType?.label || '';
+        }
         if (typeof vA === 'string') return vA.localeCompare(vB, 'ko') * dir;
         return ((vA ?? -Infinity) - (vB ?? -Infinity)) * dir;
     });
@@ -875,13 +1006,16 @@ window.handleSort = function(column) {
         if (icon) icon.textContent = state.sortDirection === 'asc' ? '▲' : '▼';
     }
     sortData();
+
+    // 현재 표시 중인 컨테이너에 맞춰 정확한 테이블 렌더러 호출
+    const searchContainer = document.getElementById('search-mode-container');
+    const deptSearchContainer = document.getElementById('dept-search-mode-container');
     const matchedUnivs = [...new Set(state.filteredData.map(d => d.대학명))];
-    if (state.searchQuery) {
-        if (matchedUnivs.length === 1) {
-            renderSearchTable();
-        } else {
-            renderDeptSearchTable();
-        }
+
+    if ((searchContainer && searchContainer.style.display !== 'none') || matchedUnivs.length === 1 || state.selectedUnivs.size === 1) {
+        renderSearchTable();
+    } else if (deptSearchContainer && deptSearchContainer.style.display !== 'none') {
+        renderDeptSearchTable();
     } else {
         renderBrowseTable();
     }
@@ -1137,6 +1271,31 @@ function updateSearchCharts() {
     updateSearchDeptMathChart();
 }
 
+window.switchDeptScoreChartMode = function(mode) {
+    state.deptScoreChartMode = mode;
+    const btnDiv = document.getElementById('btn-chart-mode-diverging');
+    const btnAbs = document.getElementById('btn-chart-mode-absolute');
+    const titleEl = document.getElementById('dept-score-chart-title');
+    const hintEl = document.getElementById('dept-score-chart-hint');
+
+    if (mode === 'diverging') {
+        btnDiv?.classList.add('active');
+        if (btnDiv) { btnDiv.style.background = '#1E40AF'; btnDiv.style.color = '#fff'; }
+        btnAbs?.classList.remove('active');
+        if (btnAbs) { btnAbs.style.background = 'transparent'; btnAbs.style.color = '#6B7280'; }
+        if (titleEl) titleEl.innerHTML = '📊 대학/시험지 평균 대비 학과별 편차 비교 (효과적)';
+        if (hintEl) hintEl.textContent = '기준선(0점) = 대학/시험지 평균';
+    } else {
+        btnAbs?.classList.add('active');
+        if (btnAbs) { btnAbs.style.background = '#1E40AF'; btnAbs.style.color = '#fff'; }
+        btnDiv?.classList.remove('active');
+        if (btnDiv) { btnDiv.style.background = 'transparent'; btnDiv.style.color = '#6B7280'; }
+        if (titleEl) titleEl.innerHTML = '📊 대학 내 학과별 100점 환산점수 및 70% Cut 비교';
+        if (hintEl) hintEl.textContent = '100점 만점 환산점수 기준';
+    }
+    updateSearchDeptScoreChart();
+};
+
 function updateSearchDeptScoreChart() {
     const ctx = document.getElementById('searchDeptScoreChart')?.getContext('2d');
     if (!ctx) return;
@@ -1150,48 +1309,158 @@ function updateSearchDeptScoreChart() {
     const bgColors = sorted.map(d => (d.examType || getExamTheme(d.시험구분)).chartBg);
     const borderColors = sorted.map(d => (d.examType || getExamTheme(d.시험구분)).chartBorder);
 
+    // 전체 평균 또는 세부시험 평균 기준치 산출
+    const validScores = scores.filter(v => v > 0);
+    const baselineAvg = validScores.length ? (validScores.reduce((a, b) => a + b, 0) / validScores.length) : 70;
+
     if (state.charts.searchDeptScore) state.charts.searchDeptScore.destroy();
-    state.charts.searchDeptScore = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: '100점 환산점수 (시험별 색상)',
-                    data: scores,
-                    backgroundColor: bgColors,
-                    borderColor: borderColors,
-                    borderWidth: 1,
-                    borderRadius: 4
-                },
-                {
-                    label: '70% Cut',
-                    data: cut70s,
-                    backgroundColor: 'rgba(79,70,229,0.7)',
-                    borderColor: '#4F46E5',
-                    borderWidth: 1,
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { display: true, position: 'top', labels: { font: { family: 'Pretendard', size: 10 }, padding: 8 } },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y+'점' : '-'}`
+
+    if (state.deptScoreChartMode === 'diverging') {
+        // [4번 추천: 양방향 편차 차트 (Diverging Baseline Chart)]
+        // 각 학과의 점수가 "대학/시험지 평균(기준선 0)" 대비 몇 점 높고 낮은지 표시
+        const diffScores = scores.map(s => +(s - baselineAvg).toFixed(2));
+        const diffCut70s = sorted.map(d => d.cut70 != null ? +(d.cut70 - baselineAvg).toFixed(2) : null);
+
+        // 양수(평균 이상)는 그린/블루 계열, 음수(평균 이하)는 오렌지/레드 계열 또는 학과 고유 테마 강조
+        const divergingBg = diffScores.map((diff, i) => {
+            return diff >= 0 ? bgColors[i] : 'rgba(225, 29, 72, 0.82)'; // 평균 미달은 직관적인 로즈/레드
+        });
+        const divergingBorder = diffScores.map((diff, i) => {
+            return diff >= 0 ? borderColors[i] : '#E11D48';
+        });
+
+        // 편차의 최댓값/최솟값으로 대칭 또는 여유있는 Y축 스케일 산출
+        const maxDiff = Math.max(...diffScores.map(Math.abs), 5);
+        const yBound = Math.ceil((maxDiff + 2) / 2) * 2;
+
+        state.charts.searchDeptScore = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: `평균 대비 편차 (기준: ${baselineAvg.toFixed(1)}점)`,
+                        data: diffScores,
+                        backgroundColor: divergingBg,
+                        borderColor: divergingBorder,
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    },
+                    {
+                        label: '70% Cut 편차',
+                        data: diffCut70s,
+                        backgroundColor: 'rgba(79,70,229,0.75)',
+                        borderColor: '#4338CA',
+                        borderWidth: 1.5,
+                        borderRadius: 4
                     }
-                }
+                ]
             },
-            scales: {
-                y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'Pretendard', size: 10 } } },
-                x: { grid: { display: false }, ticks: { font: { family: 'Pretendard', size: 10, weight: '600' }, maxRotation: 40 } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { 
+                        display: true, 
+                        position: 'top', 
+                        labels: { font: { family: 'Pretendard', size: 10, weight: '700' }, padding: 8 } 
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const val = ctx.parsed.y;
+                                if (val == null) return '-';
+                                const sign = val > 0 ? '+' : '';
+                                const actual = (baselineAvg + val).toFixed(2);
+                                return `${ctx.dataset.label}: ${sign}${val.toFixed(2)}점 (실제: ${actual}점)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { 
+                        min: -yBound, 
+                        max: yBound, 
+                        grid: { 
+                            color: ctx => ctx.tick.value === 0 ? 'rgba(30, 58, 138, 0.65)' : 'rgba(0,0,0,0.06)',
+                            lineWidth: ctx => ctx.tick.value === 0 ? 2 : 1
+                        }, 
+                        ticks: { 
+                            font: { family: 'Pretendard', size: 10, weight: '700' },
+                            callback: val => `${val > 0 ? '+' : ''}${val}점`
+                        } 
+                    },
+                    x: { grid: { display: false }, ticks: { font: { family: 'Pretendard', size: 10, weight: '600' }, maxRotation: 40 } }
+                }
+            }
+        });
+    } else {
+        // [절대 점수 모드: Y축 동적 스케일링]
+        const validValues = [...scores, ...cut70s.filter(v => v != null && v > 0)];
+        let yMin = 0;
+        let yMax = 100;
+        if (validValues.length > 0) {
+            const minVal = Math.min(...validValues);
+            const maxVal = Math.max(...validValues);
+            yMin = Math.max(0, Math.floor((minVal - 4) / 5) * 5);
+            yMax = Math.min(100, Math.ceil((maxVal + 2) / 5) * 5);
+            if (yMax - yMin < 15) {
+                yMin = Math.max(0, yMin - 5);
+                yMax = Math.min(100, yMax + 5);
             }
         }
-    });
+
+        state.charts.searchDeptScore = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: '100점 환산점수 (시험별 색상)',
+                        data: scores,
+                        backgroundColor: bgColors,
+                        borderColor: borderColors,
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    },
+                    {
+                        label: '70% Cut',
+                        data: cut70s,
+                        backgroundColor: 'rgba(79,70,229,0.75)',
+                        borderColor: '#4338CA',
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { font: { family: 'Pretendard', size: 10 }, padding: 8 } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(2)+'점' : '-'}`
+                        }
+                    }
+                },
+                scales: {
+                    y: { 
+                        min: yMin, 
+                        max: yMax, 
+                        grid: { color: 'rgba(0,0,0,0.06)' }, 
+                        ticks: { 
+                            font: { family: 'Pretendard', size: 10, weight: '600' },
+                            callback: val => `${val}점`
+                        } 
+                    },
+                    x: { grid: { display: false }, ticks: { font: { family: 'Pretendard', size: 10, weight: '600' }, maxRotation: 40 } }
+                }
+            }
+        });
+    }
 }
 
 function updateSearchDeptMathChart() {
